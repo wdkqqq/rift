@@ -82,7 +82,7 @@
 </script>
 
 <div
-  class="command-palette fixed top-0 left-0 right-0 bottom-0 m-auto w-1/3 min-w-150 h-fit bg-[#0A0A0A] border border-[#191919] rounded-2xl box-shadow z-50 transition-all duration-300 {$commandPaletteOpen
+  class="command-palette fixed top-0 left-0 right-0 bottom-0 m-auto w-1/3 min-w-150 h-fit bg-background border border-border rounded-2xl box-shadow z-50 transition-all duration-300 {$commandPaletteOpen
     ? 'active'
     : ''}"
 >
@@ -93,16 +93,16 @@
         bind:value={search}
         id="command-search"
         placeholder="Search songs, artists, albums..."
-        class="w-full bg-[#0A0A0A] py-2.5 pl-10 text-white placeholder-[#A0A0A0] focus:outline-none"
+        class="w-full bg-[bg-background] py-2.5 pl-10 text-white placeholder-secondary focus:outline-none"
         autofocus
       />
       <Search
-        class="w-5 h-5 text-[#A0A0A0] absolute left-3 top-1/2 transform -translate-y-1/2"
+        class="w-5 h-5 text-secondary absolute left-3 top-1/2 transform -translate-y-1/2"
       />
     </div>
 
     <div
-      class="border-b border-[#191919] transition-all duration-300 overflow-hidden"
+      class="border-b border-border transition-all duration-300 overflow-hidden"
       class:mb-3={hasSearchText}
       class:opacity-0={!hasSearchText}
       class:opacity-100={hasSearchText}
@@ -119,18 +119,18 @@
     >
       {#if $isLoading}
         <div class="flex justify-center items-center py-8">
-          <Loader class="w-6 h-6 text-[#A0A0A0] animate-spin" />
+          <Loader class="w-6 h-6 text-secondary animate-spin" />
         </div>
       {:else if $items.length === 0 && hasSearchText}
-        <div class="text-center py-8 text-[#A0A0A0]">
+        <div class="text-center py-8 text-secondary">
           No results found for "{search}"
         </div>
       {:else}
         {#each $items as item, index}
           <div
-            class="p-3 rounded-lg transition hover:bg-[#191919] flex items-center active:scale-95 {index ===
+            class="p-3 rounded-lg transition hover:bg-hover flex items-center active:scale-95 {index ===
             $activeIndex
-              ? 'bg-[#191919]'
+              ? 'bg-hover'
               : ''}"
             on:click={() => selectItem(index)}
           >
@@ -144,16 +144,16 @@
                   class="w-full h-full object-cover"
                 />
               {:else}
-                <Music class="h-5 w-5 text-[#A3A3A3]" />
+                <Music class="h-5 w-5 text-tertiary" />
               {/if}
             </div>
             <div class="flex-1 min-w-0">
               <div class="text-white truncate">{item.title}</div>
-              <div class="text-sm text-[#A0A0A0] truncate">
+              <div class="text-sm text-secondary truncate">
                 {item.subtitle}
               </div>
             </div>
-            <div class="text-[#A0A0A0] text-sm ml-2 shrink-0">
+            <div class="text-secondary text-sm ml-2 shrink-0">
               {item.duration}
             </div>
           </div>

@@ -42,7 +42,7 @@
   }}
 />
 
-<div class="bg-[#0A0A0A] text-white h-screen flex overflow-hidden">
+<div class="bg-background text-white h-screen flex overflow-hidden">
   <Sidebar />
 
   <div class="flex-1 flex flex-col min-h-0">

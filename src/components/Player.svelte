@@ -10,14 +10,14 @@
   } from "lucide-svelte";
 </script>
 
-<div class="p-3 border-t border-[#212121]">
+<div class="p-3 border-t border-divider">
   <div class="flex items-center justify-between pl-2">
     <div class="flex items-center flex-1">
       <div
-        class="w-11 h-11 bg-[#0F0F0F] rounded mr-3 shrink-0 flex items-center justify-center"
+        class="w-11 h-11 bg-card rounded mr-3 shrink-0 flex items-center justify-center"
       >
         <svg
-          class="h-5 w-5 text-[#A3A3A3]"
+          class="h-5 w-5 text-tertiary"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
@@ -34,9 +34,9 @@
       <div class="flex items-center">
         <div class="mr-3">
           <div class="text-white">Bad for Business</div>
-          <div class="text-sm text-[#A0A0A0]">Sabrina Carpenter</div>
+          <div class="text-sm text-secondary">Sabrina Carpenter</div>
         </div>
-        <button class="text-[#A0A0A0] hover:text-white transition-colors p-1">
+        <button class="text-secondary hover:text-white transition-colors p-1">
           <Heart class="h-4 w-4" />
         </button>
       </div>
@@ -44,15 +44,15 @@
 
     <div class="flex flex-col items-center space-y-2 w-1/3">
       <div class="flex items-center space-x-6">
-        <button class="text-[#A0A0A0] transition-colors">
+        <button class="text-secondary transition-colors">
           <Shuffle class="h-5 w-5" />
         </button>
 
-        <button class="text-[#A0A0A0] transition-colors">
+        <button class="text-secondary transition-colors">
           <SkipBack class="h-5 w-5" />
         </button>
 
-        <button class="text-[#A0A0A0] p-2 transition-transform">
+        <button class="text-secondary p-2 transition-transform">
           <Play class="h-5 w-5" />
         </button>
 
@@ -66,7 +66,7 @@
       </div>
 
       <div
-        class="flex items-center space-x-2 text-xs text-[#A0A0A0] w-full max-w-md"
+        class="flex items-center space-x-2 text-xs text-secondary w-full max-w-md"
       >
         <span>0:00</span>
         <div class="flex-1 h-1 bg-[#404040] rounded-full">
@@ -77,7 +77,7 @@
     </div>
 
     <div class="flex items-center justify-end space-x-3 w-1/3 pr-2">
-      <button class="text-[#A0A0A0] hover:text-white transition-colors">
+      <button class="text-secondary hover:text-white transition-colors">
         <Volume2 class="h-5 w-5" />
       </button>
 

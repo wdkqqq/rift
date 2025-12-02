@@ -27,20 +27,20 @@
   <!-- Header-->
   <div class="flex items-end mb-8">
     <div
-      class="w-[220px] h-[220px] bg-[#191919] shadow-lg rounded-xl flex items-center justify-center mr-6"
+      class="w-[220px] h-[220px] bg-hover shadow-lg rounded-xl flex items-center justify-center mr-6"
     >
-      <Heart fill="currentColor" class="h-17 w-17 text-[#A3A3A3]" />
+      <Heart fill="currentColor" class="h-17 w-17 text-tertiary" />
     </div>
     <div>
-      <p class="text-sm font-medium text-[#A0A0A0]">Playlist</p>
+      <p class="text-sm font-medium text-secondary">Playlist</p>
       <h1 class="text-7xl font-bold mt-2 mb-4">{title}</h1>
-      <p class="text-[#A0A0A0]">{description}</p>
+      <p class="text-secondary">{description}</p>
     </div>
   </div>
 
   <!-- Table Header -->
   <div
-    class="grid grid-cols-12 gap-4 px-4 py-2 text-[#A0A0A0] text-sm border-b border-[#191919] mb-2"
+    class="grid grid-cols-12 gap-4 px-4 py-2 text-secondary text-sm border-b border-border mb-2"
   >
     <div class="col-span-8 flex items-center">
       <div class="w-16 text-center">#</div>
@@ -57,25 +57,25 @@
         <div class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg">
           <div class="col-span-8 flex items-center">
             <div class="w-16 flex items-center justify-center">
-              <div class="h-4 bg-[#191919] rounded w-4 animate-pulse"></div>
+              <div class="h-4 bg-hover rounded w-4 animate-pulse"></div>
             </div>
             <div class="flex items-center flex-1">
               <div
-                class="w-11 h-11 bg-[#191919] rounded mr-3 shrink-0 animate-pulse"
+                class="w-11 h-11 bg-hover rounded mr-3 shrink-0 animate-pulse"
               ></div>
               <div class="flex-1">
                 <div
-                  class="h-4 bg-[#191919] rounded w-32 mb-2 animate-pulse"
+                  class="h-4 bg-hover rounded w-32 mb-2 animate-pulse"
                 ></div>
-                <div class="h-3 bg-[#191919] rounded w-24 animate-pulse"></div>
+                <div class="h-3 bg-hover rounded w-24 animate-pulse"></div>
               </div>
             </div>
           </div>
           <div class="col-span-2 flex items-center">
-            <div class="h-3 bg-[#191919] rounded w-20 animate-pulse"></div>
+            <div class="h-3 bg-hover rounded w-20 animate-pulse"></div>
           </div>
           <div class="col-span-2 flex items-center justify-end">
-            <div class="h-3 bg-[#191919] rounded w-12 animate-pulse"></div>
+            <div class="h-3 bg-hover rounded w-12 animate-pulse"></div>
           </div>
         </div>
       {/each}
@@ -85,31 +85,31 @@
     <div class="space-y-1">
       {#each songs as song (song.rank)}
         <div
-          class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg transition hover:bg-[#191919] group transition"
+          class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg transition hover:bg-hover group transition"
         >
           <div class="col-span-8 flex items-center">
             <div class="w-16 flex items-center justify-center">
-              <span class="text-[#A0A0A0] group-hover:hidden">{song.rank}</span>
+              <span class="text-secondary group-hover:hidden">{song.rank}</span>
               <Play class="h-4 w-4 hidden group-hover:block text-white" />
             </div>
             <div class="flex items-center flex-1">
               <div
                 class="w-11 h-11 bg-[#171717] rounded mr-3 shrink-0 flex items-center justify-center"
               >
-                <Music class="h-5 w-5 text-[#A3A3A3]" />
+                <Music class="h-5 w-5 text-tertiary" />
               </div>
               <div>
                 <div class="text-white">{song.title}</div>
-                <div class="text-sm text-[#A0A0A0]">
+                <div class="text-sm text-secondary">
                   {song.artist}
                 </div>
               </div>
             </div>
           </div>
-          <div class="col-span-2 flex items-center text-[#A0A0A0]">
+          <div class="col-span-2 flex items-center text-secondary">
             {song.album}
           </div>
-          <div class="col-span-2 flex items-center justify-end text-[#A0A0A0]">
+          <div class="col-span-2 flex items-center justify-end text-secondary">
             {song.duration}
           </div>
         </div>

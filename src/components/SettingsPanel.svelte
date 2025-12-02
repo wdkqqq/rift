@@ -63,18 +63,18 @@
 </script>
 
 <div
-  class="settings-panel fixed top-0 left-0 right-0 bottom-0 m-auto w-2/5 min-w-170 h-2/4 max-h-[90vh] bg-[#0A0A0A] border border-[#191919] rounded-2xl box-shadow z-50 transition-all duration-300 overflow-y-auto {$settingsPanelOpen
+  class="settings-panel fixed top-0 left-0 right-0 bottom-0 m-auto w-2/5 min-w-170 h-2/4 max-h-[90vh] bg-background border border-border rounded-2xl box-shadow z-50 transition-all duration-300 overflow-y-auto {$settingsPanelOpen
     ? 'active'
     : ''}"
 >
   <div class="flex h-full">
     <!-- Sidebar -->
-    <div class="w-1/3 bg-[#0A0A0A] p-4 rounded-l-2xl border-r border-[#191919]">
+    <div class="w-1/3 bg-background p-4 rounded-l-2xl border-r border-border">
       <div
         class="active:scale-95 transition settings-tab flex items-center p-3 rounded-lg transition-all active {activeSettingsTab ===
         'audio'
           ? 'active bg-[#222222] text-white'
-          : 'text-[#A0A0A0] hover:text-white hover:bg-[#191919]'}"
+          : 'text-secondary hover:text-white hover:bg-hover'}"
         data-settings-tab="audio"
         on:click={handleTabClick}
       >
@@ -84,7 +84,7 @@
         class="active:scale-95 transition settings-tab flex items-center p-3 rounded-lg transition-all {activeSettingsTab ===
         'privacy'
           ? 'active bg-[#222222] text-white'
-          : 'text-[#A0A0A0] hover:text-white hover:bg-[#191919]'}"
+          : 'text-secondary hover:text-white hover:bg-hover'}"
         data-settings-tab="privacy"
         on:click={handleTabClick}
       >
@@ -94,7 +94,7 @@
         class="active:scale-95 transition settings-tab flex items-center p-3 rounded-lg transition-all {activeSettingsTab ===
         'appearance'
           ? 'active bg-[#222222] text-white'
-          : 'text-[#A0A0A0] hover:text-white hover:bg-[#191919]'}"
+          : 'text-secondary hover:text-white hover:bg-hover'}"
         data-settings-tab="appearance"
         on:click={handleTabClick}
       >
@@ -109,12 +109,12 @@
         id="audio-content"
       >
         <h3
-          class="text-lg font-medium mb-6 text-[#A0A0A0] border-b border-[#191919] pb-3"
+          class="text-lg font-medium mb-6 text-secondary border-b border-border pb-3"
         >
           Audio Preferences
         </h3>
         <div class="space-y-8">
-          <div class="setting-item border-b border-[#191919] pb-6">
+          <div class="setting-item border-b border-border pb-6">
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Volume Normalization</p>
@@ -139,12 +139,12 @@
         id="privacy-content"
       >
         <h3
-          class="text-lg font-medium mb-6 text-[#A0A0A0] border-b border-[#191919] pb-3"
+          class="text-lg font-medium mb-6 text-secondary border-b border-border pb-3"
         >
           Privacy
         </h3>
         <div class="space-y-8">
-          <div class="setting-item border-b border-[#191919] pb-6">
+          <div class="setting-item border-b border-border pb-6">
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Discord Rich Presence</p>
@@ -169,12 +169,12 @@
         id="appearance-content"
       >
         <h3
-          class="text-lg font-medium mb-6 text-[#A0A0A0] border-b border-[#191919] pb-3"
+          class="text-lg font-medium mb-6 text-secondary border-b border-border pb-3"
         >
           Appearance
         </h3>
         <div class="space-y-8">
-          <div class="setting-item border-b border-[#191919] pb-6">
+          <div class="setting-item border-b border-border pb-6">
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Dark Theme</p>
@@ -189,7 +189,7 @@
             </div>
           </div>
 
-          <div class="setting-item border-b border-[#191919] pb-6">
+          <div class="setting-item border-b border-border pb-6">
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Native Decorations</p>

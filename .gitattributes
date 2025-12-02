@@ -1,5 +1,5 @@
-*.svelte linguist-language=Svelte
-*.ts linguist-language=TypeScript
-*.rs linguist-language=Rust
-
 * linguist-vendored
+
+!*.svelte
+!*.ts
+!*.rs

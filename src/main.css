@@ -1,5 +1,59 @@
 @import "tailwindcss";
 
+:root {
+  /* Backgrounds */
+  --color-background: #0a0a0a;
+  --color-card: #0f0f0f;
+  --color-surface: #171717;
+  --color-hover: #191919;
+  --color-border: #191919;
+  --color-divider: #212121;
+
+  /* Text */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #a3a3a3;
+}
+
+/* Utility classes */
+.bg-background {
+  background-color: var(--color-background);
+}
+.bg-card {
+  background-color: var(--color-card);
+}
+.bg-surface {
+  background-color: var(--color-surface);
+}
+.bg-hover {
+  background-color: var(--color-hover);
+}
+.hover\:bg-hover:hover {
+  background-color: var(--color-hover);
+}
+
+.text-primary {
+  color: var(--color-text-primary);
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.border-border {
+  border-color: var(--color-border);
+}
+.border-divider {
+  border-color: var(--color-divider);
+}
+
+/* Placeholder classes */
+.placeholder-secondary::placeholder {
+  color: var(--color-text-secondary);
+}
+
 * {
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -44,16 +98,8 @@ h1 {
   pointer-events: all;
 }
 
-.btn-scale {
-  transition: transform 0.15s ease-in-out;
-}
-
 .transition {
   transition: all 0.2s ease;
-}
-
-.btn-scale:active {
-  transform: scale(90%);
 }
 
 .checkbox-container {

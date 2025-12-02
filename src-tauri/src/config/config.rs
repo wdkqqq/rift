@@ -1,0 +1,69 @@
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Config {
+    pub discord_rpc: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self { discord_rpc: true }
+    }
+}
+
+pub fn get_config_path() -> PathBuf {
+    let mut config_dir = dirs::config_dir()
+        .or_else(|| dirs::data_local_dir())
+        .or_else(|| dirs::home_dir().map(|p| p.join(".config")))
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    config_dir.push("Rift");
+    config_dir
+}
+
+pub fn load_config() -> Config {
+    let config_path = get_config_path().join("config.json");
+
+    if config_path.exists() {
+        match fs::read_to_string(&config_path) {
+            Ok(content) => match serde_json::from_str(&content) {
+                Ok(config) => config,
+                Err(_) => {
+                    eprintln!("Error parsing config file, using default config");
+                    Config::default()
+                }
+            },
+            Err(_) => {
+                eprintln!("Error reading config file, using default config");
+                Config::default()
+            }
+        }
+    } else {
+        let default_config = Config::default();
+        save_config(&default_config);
+        default_config
+    }
+}
+
+pub fn save_config(config: &Config) {
+    let config_dir = get_config_path();
+    let config_path = config_dir.join("config.json");
+
+    if let Err(e) = fs::create_dir_all(&config_dir) {
+        eprintln!("Error creating config directory: {}", e);
+        return;
+    }
+
+    match serde_json::to_string_pretty(config) {
+        Ok(json) => {
+            if let Err(e) = fs::write(&config_path, json) {
+                eprintln!("Error saving config file: {}", e);
+            }
+        }
+        Err(e) => {
+            eprintln!("Error serializing config: {}", e);
+        }
+    }
+}

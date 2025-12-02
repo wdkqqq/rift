@@ -27,7 +27,7 @@
   <!-- Header-->
   <div class="flex items-end mb-8">
     <div
-      class="w-[220px] h-[220px] bg-hover shadow-lg rounded-xl flex items-center justify-center mr-6"
+      class="w-[220px] h-[220px] bg-hover rounded-xl flex items-center justify-center mr-6"
     >
       <Heart fill="currentColor" class="h-17 w-17 text-tertiary" />
     </div>
@@ -64,9 +64,7 @@
                 class="w-11 h-11 bg-hover rounded mr-3 shrink-0 animate-pulse"
               ></div>
               <div class="flex-1">
-                <div
-                  class="h-4 bg-hover rounded w-32 mb-2 animate-pulse"
-                ></div>
+                <div class="h-4 bg-hover rounded w-32 mb-2 animate-pulse"></div>
                 <div class="h-3 bg-hover rounded w-24 animate-pulse"></div>
               </div>
             </div>
@@ -85,7 +83,7 @@
     <div class="space-y-1">
       {#each songs as song (song.rank)}
         <div
-          class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg transition hover:bg-hover group transition"
+          class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
         >
           <div class="col-span-8 flex items-center">
             <div class="w-16 flex items-center justify-center">
@@ -94,7 +92,7 @@
             </div>
             <div class="flex items-center flex-1">
               <div
-                class="w-11 h-11 bg-[#171717] rounded mr-3 shrink-0 flex items-center justify-center"
+                class="w-11 h-11 bg-surface rounded mr-3 shrink-0 flex items-center justify-center"
               >
                 <Music class="h-5 w-5 text-tertiary" />
               </div>

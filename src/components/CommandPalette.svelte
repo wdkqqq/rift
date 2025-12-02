@@ -128,14 +128,14 @@
       {:else}
         {#each $items as item, index}
           <div
-            class="p-3 rounded-lg transition hover:bg-hover flex items-center active:scale-95 {index ===
+            class="p-3 rounded-lg [transition:all_0.1s_ease] hover:bg-hover flex items-center {index ===
             $activeIndex
               ? 'bg-hover'
               : ''}"
             on:click={() => selectItem(index)}
           >
             <div
-              class="w-10 h-10 bg-[#171717] rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"
+              class="w-10 h-10 bg-surface rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"
             >
               {#if item.cover}
                 <img

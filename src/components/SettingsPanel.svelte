@@ -63,7 +63,7 @@
 </script>
 
 <div
-  class="settings-panel fixed top-0 left-0 right-0 bottom-0 m-auto w-2/5 min-w-170 h-2/4 max-h-[90vh] bg-background border border-border rounded-2xl box-shadow z-50 transition-all duration-300 overflow-y-auto {$settingsPanelOpen
+  class="settings-panel fixed top-0 left-0 right-0 bottom-0 m-auto w-2/5 min-w-170 h-2/4 max-h-[90vh] bg-background border border-border rounded-2xl box-shadow z-50 duration-300 overflow-y-auto {$settingsPanelOpen
     ? 'active'
     : ''}"
 >
@@ -71,9 +71,9 @@
     <!-- Sidebar -->
     <div class="w-1/3 bg-background p-4 rounded-l-2xl border-r border-border">
       <div
-        class="active:scale-95 transition settings-tab flex items-center p-3 rounded-lg transition-all active {activeSettingsTab ===
+        class="active:scale-95 [transition:all_0.2s_ease] settings-tab mb-1 flex items-center p-2.5 rounded-lg active {activeSettingsTab ===
         'audio'
-          ? 'active bg-[#222222] text-white'
+          ? 'active bg-hover text-white'
           : 'text-secondary hover:text-white hover:bg-hover'}"
         data-settings-tab="audio"
         on:click={handleTabClick}
@@ -81,9 +81,9 @@
         <span>Audio</span>
       </div>
       <div
-        class="active:scale-95 transition settings-tab flex items-center p-3 rounded-lg transition-all {activeSettingsTab ===
+        class="active:scale-95 [transition:all_0.2s_ease] settings-tab mb-1 flex items-center p-2.5 rounded-lg {activeSettingsTab ===
         'privacy'
-          ? 'active bg-[#222222] text-white'
+          ? 'active bg-hover text-white'
           : 'text-secondary hover:text-white hover:bg-hover'}"
         data-settings-tab="privacy"
         on:click={handleTabClick}
@@ -91,9 +91,9 @@
         <span>Privacy</span>
       </div>
       <div
-        class="active:scale-95 transition settings-tab flex items-center p-3 rounded-lg transition-all {activeSettingsTab ===
+        class="active:scale-95 [transition:all_0.2s_ease] settings-tab mb-1 flex items-center p-2.5 rounded-lg {activeSettingsTab ===
         'appearance'
-          ? 'active bg-[#222222] text-white'
+          ? 'active bg-hover text-white'
           : 'text-secondary hover:text-white hover:bg-hover'}"
         data-settings-tab="appearance"
         on:click={handleTabClick}
@@ -118,7 +118,7 @@
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Volume Normalization</p>
-                <p class="text-sm text-[#CCCCCC]">
+                <p class="text-sm text-secondary">
                   Automatically adjust all tracks to consistent volume levels
                 </p>
               </div>
@@ -148,7 +148,7 @@
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Discord Rich Presence</p>
-                <p class="text-sm text-[#CCCCCC]">
+                <p class="text-sm text-secondary">
                   Share your listening activity on Discord profile
                 </p>
               </div>
@@ -178,7 +178,7 @@
             <div class="flex items-center justify-between">
               <div class="flex-1 mr-6">
                 <p class="font-medium text-white mb-1">Dark Theme</p>
-                <p class="text-sm text-[#CCCCCC]">
+                <p class="text-sm text-secondary">
                   Use dark color scheme throughout the application
                 </p>
               </div>

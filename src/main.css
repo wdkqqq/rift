@@ -76,12 +76,7 @@ textarea {
 }
 
 body {
-  font-weight: 400;
   font-family: "Inter", sans-serif;
-}
-
-h1 {
-  font-weight: 700;
 }
 
 .command-palette,
@@ -96,10 +91,6 @@ h1 {
   opacity: 1;
   transform: scale(1) translateY(0);
   pointer-events: all;
-}
-
-.transition {
-  transition: all 0.2s ease;
 }
 
 .checkbox-container {
@@ -147,16 +138,6 @@ h1 {
 .checkbox-input:checked + .checkbox-slider:before {
   transform: translateX(20px);
   background-color: rgb(0, 0, 0);
-}
-
-.settings-tab {
-  padding: 10px 10px;
-  border-radius: 8px;
-  margin-bottom: 4px;
-}
-
-.settings-tab:hover {
-  background-color: #1a1a1a;
 }
 
 .settings-tab.active {

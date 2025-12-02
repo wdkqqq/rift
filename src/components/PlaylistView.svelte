@@ -61,7 +61,7 @@
             </div>
             <div class="flex items-center flex-1">
               <div
-                class="w-11 h-11 bg-[#191919] rounded mr-3 flex-shrink-0 animate-pulse"
+                class="w-11 h-11 bg-[#191919] rounded mr-3 shrink-0 animate-pulse"
               ></div>
               <div class="flex-1">
                 <div
@@ -94,7 +94,7 @@
             </div>
             <div class="flex items-center flex-1">
               <div
-                class="w-11 h-11 bg-[#171717] rounded mr-3 flex-shrink-0 flex items-center justify-center"
+                class="w-11 h-11 bg-[#171717] rounded mr-3 shrink-0 flex items-center justify-center"
               >
                 <Music class="h-5 w-5 text-[#A3A3A3]" />
               </div>

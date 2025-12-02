@@ -12,7 +12,7 @@
 </script>
 
 <div
-  class="pt-7 flex-shrink-0 flex flex-col items-start justify-between border-r border-[#212121] min-h-screen bg-[#0A0A0A] relative transition-all group"
+  class="pt-7 shrink-0 flex flex-col items-start justify-between border-r border-[#212121] min-h-screen bg-[#0A0A0A] relative transition-all group"
 >
   <div class="flex flex-col w-full px-4 space-y-1">
     <!-- Songs Button -->

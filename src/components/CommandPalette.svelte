@@ -4,6 +4,8 @@
   import { Search, Music, Loader } from "lucide-svelte";
   import { writable } from "svelte/store";
   import { invoke } from "@tauri-apps/api/core";
+  import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+  import { appCacheDir } from "@tauri-apps/api/path";
 
   let search = "";
   let items = writable([]);
@@ -16,6 +18,27 @@
     performSearch(search);
   }
 
+  async function getCoverUrl(coverFilename) {
+    if (!coverFilename) return null;
+
+    try {
+      const cacheDir = await appCacheDir();
+
+      const path = `${cacheDir}/covers/${coverFilename}`;
+
+      const data = await readFile(path, {
+        dir: BaseDirectory.Cache,
+        encoding: null,
+      });
+
+      const blob = new Blob([data]);
+      return URL.createObjectURL(blob);
+    } catch (err) {
+      console.error("Cannot load cover:", err);
+      return null;
+    }
+  }
+
   async function performSearch(query) {
     if (query.length < 1) return;
 
@@ -23,8 +46,22 @@
     try {
       console.log("Searching for:", query);
       const results = await invoke("search_music", { query });
-      console.log("Search results:", results);
-      items.set(results);
+
+      const processedResults = await Promise.all(
+        results.map(async (song) => {
+          let coverUrl = null;
+          if (song.cover) {
+            coverUrl = await getCoverUrl(song.cover);
+          }
+          return {
+            ...song,
+            coverUrl,
+          };
+        }),
+      );
+
+      console.log("Processed search results:", processedResults);
+      items.set(processedResults);
     } catch (error) {
       console.error("Search error:", error);
       items.set([]);
@@ -94,7 +131,6 @@
         id="command-search"
         placeholder="Search songs, artists, albums..."
         class="w-full bg-[bg-background] py-2.5 pl-10 text-white placeholder-secondary focus:outline-none"
-        autofocus
       />
       <Search
         class="w-5 h-5 text-secondary absolute left-3 top-1/2 transform -translate-y-1/2"
@@ -137,9 +173,9 @@
             <div
               class="w-10 h-10 bg-surface rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"
             >
-              {#if item.cover}
+              {#if item.coverUrl}
                 <img
-                  src={item.cover}
+                  src={item.coverUrl}
                   alt={item.title}
                   class="w-full h-full object-cover"
                 />

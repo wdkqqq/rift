@@ -1,34 +1,35 @@
+use crate::models::models::Song;
 use lofty::{file::AudioFile, file::TaggedFileExt, read_from_path, tag::Accessor};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::models::models::Song;
-
-fn extract_and_cache_cover(audio_path: &Path, cache_dir: &Path) -> io::Result<Option<String>> {
+fn extract_and_cache_cover_with_hash(
+    audio_path: &Path,
+    cache_dir: &Path,
+) -> io::Result<(Option<String>, Option<String>)> {
     let tagged_file = match read_from_path(audio_path) {
         Ok(file) => file,
-        Err(_) => return Ok(None),
+        Err(_) => return Ok((None, None)),
     };
 
     let tag = match tagged_file.primary_tag() {
         Some(primary) => primary,
         None => match tagged_file.first_tag() {
             Some(first) => first,
-            None => return Ok(None),
+            None => return Ok((None, None)),
         },
     };
 
     let picture = match tag.pictures().first() {
         Some(pic) => pic,
-        None => return Ok(None),
+        None => return Ok((None, None)),
     };
 
     let mut hasher = Sha256::new();
     hasher.update(picture.data());
     let hash = hasher.finalize();
-
     let hash_hex = hash
         .iter()
         .map(|byte| format!("{:02x}", byte))
@@ -77,20 +78,19 @@ fn extract_and_cache_cover(audio_path: &Path, cache_dir: &Path) -> io::Result<Op
     let cache_file_path = cache_dir.join(&file_name);
 
     if cache_file_path.exists() {
-        return Ok(Some(cache_file_path.to_string_lossy().to_string()));
+        return Ok((Some(file_name), Some(hash_hex)));
     }
 
     fs::create_dir_all(cache_dir)?;
-
     fs::write(&cache_file_path, picture.data())?;
 
-    Ok(Some(cache_file_path.to_string_lossy().to_string()))
+    Ok((Some(file_name), Some(hash_hex)))
 }
 
 pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
     let cache_dir = match dirs::cache_dir() {
         Some(mut cache) => {
-            cache.push("rift");
+            cache.push("me.wdkq.rift");
             cache.push("covers");
             cache
         }
@@ -101,12 +101,12 @@ pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
         }
     };
 
-    let cover_path = match extract_and_cache_cover(path, &cache_dir) {
-        Ok(Some(path)) => path,
-        Ok(None) => String::new(),
+    let (cover_file, _cover_hash) = match extract_and_cache_cover_with_hash(path, &cache_dir) {
+        Ok((Some(file), hash)) => (file, hash),
+        Ok((None, _)) => (String::new(), None),
         Err(e) => {
             eprintln!("Warning: Could not cache cover for {:?}: {}", path, e);
-            String::new()
+            (String::new(), None)
         }
     };
 
@@ -138,7 +138,7 @@ pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
                 title,
                 subtitle: artist,
                 duration: duration_str,
-                cover: cover_path,
+                cover: cover_file,
                 path: path.to_string_lossy().to_string(),
             })
         }
@@ -147,61 +147,4 @@ pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
             None
         }
     }
-}
-
-pub fn clear_cover_cache() -> io::Result<()> {
-    let cache_dir = match dirs::cache_dir() {
-        Some(mut cache) => {
-            cache.push("rift");
-            cache.push("covers");
-            cache
-        }
-        None => PathBuf::from("./.cover_cache"),
-    };
-
-    if cache_dir.exists() {
-        fs::remove_dir_all(&cache_dir)?;
-        fs::create_dir_all(&cache_dir)?;
-    }
-
-    Ok(())
-}
-
-pub fn get_cached_cover_path(audio_path: &PathBuf) -> Option<String> {
-    let cache_dir = match dirs::cache_dir() {
-        Some(mut cache) => {
-            cache.push("rift");
-            cache.push("covers");
-            cache
-        }
-        None => PathBuf::from("./.cover_cache"),
-    };
-
-    let tagged_file = read_from_path(audio_path).ok()?;
-    let tag = tagged_file
-        .primary_tag()
-        .or_else(|| tagged_file.first_tag())?;
-    let picture = tag.pictures().first()?;
-
-    let mut hasher = Sha256::new();
-    hasher.update(picture.data());
-    let hash = hasher.finalize();
-
-    let hash_hex = hash
-        .iter()
-        .map(|byte| format!("{:02x}", byte))
-        .collect::<String>();
-
-    let extensions = ["jpg", "png", "gif", "bmp", "tiff", "webp"];
-
-    for ext in extensions.iter() {
-        let file_name = format!("{}.{}", hash_hex, ext);
-        let cache_path = cache_dir.join(file_name);
-
-        if cache_path.exists() {
-            return Some(cache_path.to_string_lossy().to_string());
-        }
-    }
-
-    None
 }

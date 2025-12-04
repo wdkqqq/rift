@@ -1,6 +1,6 @@
 use super::metadata::read_audio_metadata;
 use crate::models::models::Song;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -35,6 +35,11 @@ pub fn index_music_files() -> HashMap<String, Song> {
     }
 
     index_directory(&music_dir, &mut music_library);
+
+    if let Err(e) = cleanup_unused_covers(&music_library) {
+        eprintln!("Error cleaning up unused covers: {}", e);
+    }
+
     println!("Indexed {} songs", music_library.len());
     music_library
 }
@@ -61,4 +66,46 @@ fn index_directory(dir: &PathBuf, music_library: &mut HashMap<String, Song>) {
             }
         }
     }
+}
+
+fn cleanup_unused_covers(music_library: &HashMap<String, Song>) -> std::io::Result<()> {
+    let cache_dir = match dirs::cache_dir() {
+        Some(mut cache) => {
+            cache.push("me.wdkq.rift");
+            cache.push("covers");
+            cache
+        }
+        None => PathBuf::from("./.cover_cache"),
+    };
+
+    if !cache_dir.exists() {
+        return Ok(());
+    }
+
+    let mut used_covers = HashSet::new();
+
+    for song in music_library.values() {
+        if !song.cover.is_empty() {
+            used_covers.insert(song.cover.clone());
+        }
+    }
+
+    let entries = fs::read_dir(&cache_dir)?;
+
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() {
+            if let Some(file_name) = path.file_name() {
+                let file_name_str = file_name.to_string_lossy().to_string();
+
+                if !used_covers.contains(&file_name_str) {
+                    fs::remove_file(&path)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }

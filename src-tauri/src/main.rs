@@ -12,6 +12,8 @@ use discord::rpc::discord_rpc;
 use music::library::MusicLibrary;
 use std::thread;
 
+use tauri_plugin_fs::init;
+
 fn main() {
     #[cfg(target_os = "linux")]
     // Temporary Nvidia/Wayland workaround for Tauri webview crashes
@@ -30,6 +32,7 @@ fn main() {
 
     tauri::Builder::default()
         .manage(music_library)
+        .plugin(init())
         .invoke_handler(tauri::generate_handler![
             search_music,
             get_music_stats,

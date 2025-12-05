@@ -5,21 +5,17 @@
             title="Rift" alt="Logo" width="120" />
         <h1>Rift</h1>
     </p>
-    <p width="120">
+    <p>
         Rift is a beautiful privacy‑first music player.<br/>
         Enjoy your music without distractions, ads, or tracking.
     <br/>
+    <div align="center">
+        <a href="https://github.com/wdkqqq/rift/releases/latest">Releases</a>
+        <span>•</span>
+        <a href="https://github.com/wdkqqq/rift/actions/workflows/build.yml">Nightly</a>
+    </div>
+
 </div>
-
-## Downloads
-You can find downloads in [Releases](https://github.com/userift/rift/releases) section. If you want to download Rift with a package manager, you can use this packages:
-
-
-- [AUR](https://aur.archlinux.org/)
-- [Fedora COPR](https://aur.archlinux.org/)
-- [Homebrew](https://aur.archlinux.org/)
-
-
 
 ## Build from source
 ### Requirements
@@ -30,7 +26,7 @@ You can find downloads in [Releases](https://github.com/userift/rift/releases) s
 
 1. Clone repository:
 ```zsh
-git clone https://github.com/userift/rift.git
+git clone https://github.com/wdkqqq/rift.git
 cd Rift
 ```
 2. Install dependencies:
@@ -48,4 +44,8 @@ tauri build
 ```
 ## Contributing
 
-We are always welcome to contributions! See CONTRIBUTING.md for more information.
+We are always welcome to contributions! See [CONTRIBUTING.md](https://github.com/wdkqqq/rift/blob/main/CONTRIBUTING.md) for contributing guide.
+
+## License
+
+[GPL-3.0 license](https://github.com/wdkqqq/rift/blob/main/LICENSE)

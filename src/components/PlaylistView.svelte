@@ -53,7 +53,7 @@
   {#if loading}
     <!-- Skeleton Songs List -->
     <div class="space-y-1">
-      {#each Array(8) as _, i}
+      {#each Array(8) as _}
         <div class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg">
           <div class="col-span-8 flex items-center">
             <div class="w-16 flex items-center justify-center">

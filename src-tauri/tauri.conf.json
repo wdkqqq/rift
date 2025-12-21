@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "me.wdkq.rift",
   "build": {
-    "beforeDevCommand": "pnpm run dev",
+    "beforeDevCommand": "bun dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm run build",
+    "beforeBuildCommand": "bun build",
     "frontendDist": "../dist"
   },
   "app": {

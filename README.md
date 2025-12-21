@@ -22,7 +22,6 @@
 -   [Node.js](https://nodejs.org/)
 -   [Rust](https://rust-lang.org/)
 -   [Tauri](https://tauri.app/)
--   [pnpm](https://pnpm.io/)
 
 1. Clone repository:
 ```zsh
@@ -31,10 +30,18 @@ cd Rift
 ```
 2. Install dependencies:
 ```zsh
-pnpm i
-tauri build
+bun install
+```
+or
+```zsh
+pnpm install
+```
+or
+```zsh
+npm install
 ```
 3. Run application
+
 ```zsh
 tauri run
 ```

@@ -31,13 +31,9 @@ cd Rift
 2. Install dependencies:
 ```zsh
 bun install
-```
-or
-```zsh
+# or
 pnpm install
-```
-or
-```zsh
+# or
 npm install
 ```
 3. Run application

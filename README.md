@@ -1,3 +1,4 @@
+
 <div align="center">
     <br/>
     <p>
@@ -9,13 +10,14 @@
         Rift is a beautiful privacy‑first music player.<br/>
         Enjoy your music without distractions, ads, or tracking.
     <br/>
-    <div align="center">
-        <a href="https://github.com/wdkqqq/rift/releases/latest">Releases</a>
-        <span>•</span>
-        <a href="https://github.com/wdkqqq/rift/actions/workflows/build.yml">Nightly</a>
-    </div>
-
+    <br/>
+    <img src="/resources/screenshot.png"
+        title="Interface" alt="Screenshot" width="700" />
 </div>
+
+> [!WARNING]
+> Project on hold. Development is temporarily paused, so bugs are expected.
+> Contributions are highly welcome! PRs and Issues are appreciated to help keep the project alive.    
 
 ## Build from source
 ### Requirements

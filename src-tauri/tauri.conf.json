@@ -10,11 +10,18 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
         "title": "Rift",
         "width": 1200,
-        "height": 720
+        "height": 720,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": {
+          "x": 8,
+          "y": 18
+        }
       }
     ],
     "security": {

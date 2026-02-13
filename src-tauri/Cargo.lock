@@ -3,6 +3,25 @@
 version = 4
 
 [[package]]
+name = "Rift"
+version = "0.1.0"
+dependencies = [
+ "base64 0.21.7",
+ "chrono",
+ "dirs",
+ "discord-rich-presence",
+ "image",
+ "lofty",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-fs",
+ "tauri-plugin-opener",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3164,25 +3183,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
-]
-
-[[package]]
-name = "rift"
-version = "0.1.0"
-dependencies = [
- "base64 0.21.7",
- "chrono",
- "dirs",
- "discord-rich-presence",
- "image",
- "lofty",
- "serde",
- "serde_json",
- "sha2",
- "tauri",
- "tauri-build",
- "tauri-plugin-fs",
- "tauri-plugin-opener",
 ]
 
 [[package]]

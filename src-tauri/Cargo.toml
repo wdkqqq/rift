@@ -1,5 +1,5 @@
 [package]
-name = "rift"
+name = "Rift"
 version = "0.1.0"
 description = "An open-source music player"
 authors = ["Rift contributors"]

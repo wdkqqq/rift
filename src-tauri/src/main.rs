@@ -8,9 +8,9 @@ mod models;
 mod music;
 
 use commands::commands::*;
-use discord::rpc::discord_rpc;
+use discord::rpc::DiscordRpcService;
 use music::library::MusicLibrary;
-use std::thread;
+use music::playback::PlaybackService;
 
 use tauri_plugin_fs::init;
 
@@ -25,18 +25,24 @@ fn main() {
     }
 
     let music_library = MusicLibrary::new();
-
-    thread::spawn(|| {
-        discord_rpc();
-    });
+    let playback_service = PlaybackService::start();
+    let discord_rpc_service = DiscordRpcService::start();
 
     tauri::Builder::default()
         .manage(music_library)
+        .manage(playback_service)
+        .manage(discord_rpc_service)
         .plugin(init())
         .invoke_handler(tauri::generate_handler![
             search_music,
             get_music_stats,
-            reindex_music
+            reindex_music,
+            playback_load_and_play,
+            playback_play,
+            playback_pause,
+            playback_seek,
+            playback_set_volume,
+            playback_get_state
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

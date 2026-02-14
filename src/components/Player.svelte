@@ -1,91 +1,398 @@
 <script lang="ts">
-  import {
-    Shuffle,
-    SkipBack,
-    Play,
-    SkipForward,
-    Repeat,
-    Heart,
-    Volume2,
-  } from "lucide-svelte";
+    import { invoke } from "@tauri-apps/api/core";
+    import { onDestroy, onMount } from "svelte";
+    import {
+        Shuffle,
+        SkipBack,
+        Play,
+        Pause,
+        SkipForward,
+        Repeat,
+        Repeat1,
+        Heart,
+        Volume2,
+    } from "lucide-svelte";
+    import { playbackIndex, playbackQueue } from "../stores/app";
+
+    type PlaybackState = {
+        is_loaded: boolean;
+        is_playing: boolean;
+        current_time: number;
+        duration: number;
+        volume: number;
+    };
+
+    let currentTime = 0;
+    let duration = 0;
+    let volume = 70;
+    let isPlaying = false;
+    let lastLoadedPath: string | null = null;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let isSeeking = false;
+    let seekPreview = 0;
+    let isAdvancing = false;
+    let isSyncing = false;
+    let repeatMode: "off" | "all" | "one" = "off";
+
+    $: currentTrack = $playbackQueue[$playbackIndex] ?? null;
+    $: progressPercent =
+        duration > 0 ? `${(effectiveCurrentTime / duration) * 100}%` : "0%";
+    $: volumePercent = `${volume}%`;
+    $: effectiveCurrentTime = isSeeking ? seekPreview : currentTime;
+
+    $: if (currentTrack?.path && currentTrack.path !== lastLoadedPath) {
+        void loadAndPlay(currentTrack.path);
+    }
+
+    async function loadAndPlay(path: string) {
+        try {
+            const state = await invoke<PlaybackState>(
+                "playback_load_and_play",
+                {
+                    path,
+                },
+            );
+            lastLoadedPath = path;
+            applyState(state);
+        } catch (error) {
+            console.error("Failed to load track:", error);
+            isPlaying = false;
+        }
+    }
+
+    function applyState(state: PlaybackState) {
+        isPlaying = state.is_playing;
+        currentTime = state.current_time || 0;
+        duration = state.duration || 0;
+        volume = Math.round((state.volume || 0) * 100);
+    }
+
+    async function syncState() {
+        if (isSyncing || isSeeking) return;
+
+        if (!currentTrack) {
+            isPlaying = false;
+            currentTime = 0;
+            duration = 0;
+            return;
+        }
+
+        isSyncing = true;
+        try {
+            const state = await invoke<PlaybackState>("playback_get_state");
+            applyState(state);
+            maybeAdvanceQueue(state);
+        } catch (error) {
+            console.error("Failed to sync playback state:", error);
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    function maybeAdvanceQueue(state: PlaybackState) {
+        if (isAdvancing) return;
+        if (state.is_playing) return;
+        if (state.duration <= 0) return;
+        if (state.current_time < state.duration - 0.05) return;
+
+        if (repeatMode === "one" && currentTrack) {
+            isAdvancing = true;
+            void loadAndPlay(currentTrack.path).finally(() => {
+                isAdvancing = false;
+            });
+            return;
+        }
+
+        if (
+            repeatMode === "all" &&
+            $playbackQueue.length === 1 &&
+            currentTrack
+        ) {
+            isAdvancing = true;
+            void loadAndPlay(currentTrack.path).finally(() => {
+                isAdvancing = false;
+            });
+            return;
+        }
+
+        if ($playbackIndex < $playbackQueue.length - 1) {
+            isAdvancing = true;
+            playbackIndex.set($playbackIndex + 1);
+            setTimeout(() => {
+                isAdvancing = false;
+            }, 100);
+            return;
+        }
+
+        if (repeatMode === "all" && $playbackQueue.length > 0) {
+            isAdvancing = true;
+            playbackIndex.set(0);
+            setTimeout(() => {
+                isAdvancing = false;
+            }, 100);
+        }
+    }
+
+    async function togglePlayPause() {
+        if (!currentTrack) return;
+
+        try {
+            const state = await invoke<PlaybackState>(
+                isPlaying ? "playback_pause" : "playback_play",
+            );
+            applyState(state);
+        } catch (error) {
+            console.error("Failed to toggle playback:", error);
+        }
+    }
+
+    function playPrevious() {
+        if ($playbackQueue.length === 0) return;
+        if ($playbackIndex > 0) {
+            playbackIndex.set($playbackIndex - 1);
+        }
+    }
+
+    function playNext() {
+        if ($playbackQueue.length === 0) return;
+        if ($playbackIndex < $playbackQueue.length - 1) {
+            playbackIndex.set($playbackIndex + 1);
+        }
+    }
+
+    function startSeek(event: Event) {
+        const target = event.currentTarget as HTMLInputElement;
+        seekPreview = Number(target.value);
+        isSeeking = true;
+    }
+
+    async function commitSeek(event: Event) {
+        if (!currentTrack) return;
+        const target = event.currentTarget as HTMLInputElement;
+        const nextValue = Number(target.value);
+        seekPreview = nextValue;
+        isSeeking = false;
+
+        try {
+            const state = await invoke<PlaybackState>("playback_seek", {
+                positionSeconds: nextValue,
+            });
+            applyState(state);
+        } catch (error) {
+            console.error("Failed to seek playback:", error);
+        }
+    }
+
+    async function setVolume(event: Event) {
+        const target = event.currentTarget as HTMLInputElement;
+        const nextVolume = Number(target.value);
+        volume = nextVolume;
+
+        try {
+            const state = await invoke<PlaybackState>("playback_set_volume", {
+                volume: nextVolume / 100,
+            });
+            applyState(state);
+        } catch (error) {
+            console.error("Failed to set volume:", error);
+        }
+    }
+
+    function cycleRepeatMode() {
+        if (repeatMode === "off") {
+            repeatMode = "all";
+            return;
+        }
+
+        if (repeatMode === "all") {
+            repeatMode = "one";
+            return;
+        }
+
+        repeatMode = "off";
+    }
+
+    function formatTime(seconds: number): string {
+        if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${String(secs).padStart(2, "0")}`;
+    }
+
+    onMount(() => {
+        pollTimer = setInterval(() => {
+            void syncState();
+        }, 500);
+    });
+
+    onDestroy(() => {
+        if (pollTimer) clearInterval(pollTimer);
+    });
 </script>
 
 <div class="p-3 border-t border-divider">
-  <div class="flex items-center justify-between pl-2">
-    <div class="flex items-center flex-1">
-      <div
-        class="w-11 h-11 bg-card rounded mr-3 shrink-0 flex items-center justify-center"
-      >
-        <svg
-          class="h-5 w-5 text-tertiary"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-          />
-        </svg>
-      </div>
-      <div class="flex items-center">
-        <div class="mr-3">
-          <div class="text-white">Bad for Business</div>
-          <div class="text-sm text-secondary">Sabrina Carpenter</div>
+    <div class="flex items-center justify-between pl-2">
+        <div class="flex items-center flex-1 min-w-0">
+            {#if currentTrack}
+                <div
+                    class="w-11 h-11 bg-card rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"
+                >
+                    {#if currentTrack.coverUrl}
+                        <img
+                            src={currentTrack.coverUrl}
+                            alt={currentTrack.title}
+                            class="w-full h-full object-cover"
+                        />
+                    {:else}
+                        <svg
+                            class="h-5 w-5 text-tertiary"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                            />
+                        </svg>
+                    {/if}
+                </div>
+                <div class="flex items-center min-w-0">
+                    <div class="mr-3 min-w-0">
+                        <div class="text-white truncate max-w-56">
+                            {currentTrack.title}
+                        </div>
+                        <div class="text-sm text-secondary truncate max-w-56">
+                            {currentTrack.subtitle}
+                        </div>
+                    </div>
+                    <button
+                        class="text-secondary hover:text-white transition-colors p-1 active:scale-90 [transition:all_0.2s_ease]"
+                    >
+                        <Heart class="h-4 w-4" />
+                    </button>
+                </div>
+            {/if}
         </div>
-        <button class="text-secondary hover:text-white transition-colors p-1">
-          <Heart class="h-4 w-4" />
-        </button>
-      </div>
-    </div>
 
-    <div class="flex flex-col items-center space-y-2 w-1/3">
-      <div class="flex items-center space-x-6">
-        <button class="text-secondary transition-colors">
-          <Shuffle class="h-5 w-5" />
-        </button>
+        <div class="flex flex-col items-center space-y-2 w-1/3">
+            <div class="flex items-center space-x-6">
+                <button
+                    class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
+                    disabled={!currentTrack}
+                >
+                    <Shuffle class="h-5 w-5" />
+                </button>
 
-        <button class="text-secondary transition-colors">
-          <SkipBack class="h-5 w-5" />
-        </button>
+                <button
+                    class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
+                    on:click={playPrevious}
+                    disabled={!currentTrack}
+                >
+                    <SkipBack class="h-5 w-5" />
+                </button>
 
-        <button class="text-secondary p-2 transition-transform">
-          <Play class="h-5 w-5" />
-        </button>
+                <button
+                    class="text-[#818181] p-2 transition-colors [transition:all_0.2s_ease] hover:text-white disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
+                    on:click={togglePlayPause}
+                    disabled={!currentTrack}
+                >
+                    {#if isPlaying}
+                        <Pause class="h-5 w-5" />
+                    {:else}
+                        <Play class="h-5 w-5" />
+                    {/if}
+                </button>
 
-        <button class="text-[#818181] transition-colors">
-          <SkipForward class="h-5 w-5" />
-        </button>
+                <button
+                    class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
+                    on:click={playNext}
+                    disabled={!currentTrack}
+                >
+                    <SkipForward class="h-5 w-5" />
+                </button>
 
-        <button class="text-[#818181] transition-colors">
-          <Repeat class="h-5 w-5" />
-        </button>
-      </div>
+                <button
+                    class="transition-colors [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f] {repeatMode ===
+                    'off'
+                        ? 'text-[#818181] hover:text-white'
+                        : 'text-white'}"
+                    on:click={cycleRepeatMode}
+                    disabled={!currentTrack}
+                >
+                    {#if repeatMode === "one"}
+                        <Repeat1 class="h-5 w-5" />
+                    {:else}
+                        <Repeat class="h-5 w-5" />
+                    {/if}
+                </button>
+            </div>
 
-      <div
-        class="flex items-center space-x-2 text-xs text-secondary w-full max-w-md"
-      >
-        <span>0:00</span>
-        <div class="flex-1 h-1 bg-[#404040] rounded-full">
-          <div class="h-1 bg-white rounded-full w-1/3"></div>
+            <div
+                class="flex items-center space-x-2 text-xs text-secondary w-full max-w-md"
+            >
+                <span class="w-10 text-right shrink-0"
+                    >{formatTime(effectiveCurrentTime)}</span
+                >
+                <div
+                    class="group relative flex-1 h-1 bg-[#404040] rounded-full"
+                >
+                    <div
+                        class="absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
+                        style:width={progressPercent}
+                    >
+                        <div
+                            class="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white opacity-0 transition-opacity group-hover:opacity-100"
+                        ></div>
+                    </div>
+                    <input
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        type="range"
+                        min="0"
+                        max={duration > 0 ? duration : 0}
+                        step="0.1"
+                        value={duration > 0 ? effectiveCurrentTime : 0}
+                        on:input={startSeek}
+                        on:change={commitSeek}
+                    />
+                </div>
+                <span class="w-10 shrink-0"
+                    >{duration > 0
+                        ? formatTime(duration)
+                        : (currentTrack?.duration ?? "3:35")}</span
+                >
+            </div>
         </div>
-        <span>3:35</span>
-      </div>
-    </div>
 
-    <div class="flex items-center justify-end space-x-3 w-1/3 pr-2">
-      <button class="text-secondary hover:text-white transition-colors">
-        <Volume2 class="h-5 w-5" />
-      </button>
+        <div class="flex items-center justify-end space-x-3 w-1/3 pr-2">
+            <button
+                class="text-secondary hover:text-white transition-colors active:scale-90 [transition:all_0.2s_ease]"
+            >
+                <Volume2 class="h-5 w-5" />
+            </button>
 
-      <div class="w-24">
-        <div class="h-1 bg-[#404040] rounded-full">
-          <div class="h-1 bg-white rounded-full w-2/3"></div>
+            <div class="group w-24 relative h-1 bg-[#404040] rounded-full">
+                <div
+                    class="absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
+                    style:width={volumePercent}
+                >
+                    <div
+                        class="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white opacity-0 transition-opacity group-hover:opacity-100"
+                    ></div>
+                </div>
+                <input
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={volume}
+                    on:input={setVolume}
+                />
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>

@@ -56,4 +56,9 @@ impl MusicLibrary {
 
         results
     }
+
+    pub fn by_path(&self, path: &str) -> Option<Song> {
+        let library = self.library.lock().unwrap();
+        library.get(path).cloned()
+    }
 }

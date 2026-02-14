@@ -30,3 +30,5 @@ base64 = "0.21.0"
 sha2 = "0.10"
 image = "0.24"
 tauri-plugin-fs = "2.4.4"
+rodio = "0.20.1"
+reqwest = { version = "0.12.24", default-features = false, features = ["blocking", "json", "rustls-tls"] }

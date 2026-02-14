@@ -8,6 +8,8 @@
         activeLibraryView,
         favoritesOpenRequest,
         libraryHomeRequest,
+        playbackIndex,
+        playbackQueue,
     } from "../stores/app";
 
     type LibrarySong = {
@@ -282,6 +284,22 @@
         animateLibraryModeSwitch("home", null);
     }
 
+    function playTrack(trackIndex: number) {
+        if (libraryMode !== "album") return;
+
+        const queue = selectedTracks.map((track) => ({
+            title: track.title,
+            subtitle: track.subtitle,
+            album: track.album,
+            duration: track.duration,
+            coverUrl: track.coverUrl,
+            path: track.path,
+        }));
+
+        playbackQueue.set(queue);
+        playbackIndex.set(trackIndex);
+    }
+
     function handlePopState(event: PopStateEvent) {
         const state = event.state;
         if (
@@ -467,6 +485,7 @@
                                 {#each selectedTracks as song, index (song.path)}
                                     <div
                                         class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
+                                        on:click={() => playTrack(index)}
                                     >
                                         <div
                                             class="col-span-8 flex items-center"
@@ -624,6 +643,7 @@
                         {#each selectedTracks as song, index (song.path)}
                             <div
                                 class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
+                                on:click={() => playTrack(index)}
                             >
                                 <div class="col-span-8 flex items-center">
                                     <div

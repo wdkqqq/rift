@@ -4,7 +4,7 @@ export const commandPaletteOpen = writable(false);
 export const settingsPanelOpen = writable(false);
 export const activeSettingsTab = writable("audio");
 export const activeLibraryView = writable<"songs" | "library" | "detail">(
-  "songs",
+  "library",
 );
 export const favoritesOpenRequest = writable(0);
 export const playlistsRefreshToken = writable(0);

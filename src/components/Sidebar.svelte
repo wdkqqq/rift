@@ -2,10 +2,9 @@
     import {
         activeLibraryView,
         commandPaletteOpen,
-        favoritesOpenRequest,
         settingsPanelOpen,
     } from "../stores/app";
-    import { Search, Menu, Music, Settings } from "lucide-svelte";
+    import { Search, House, Music, Settings } from "lucide-svelte";
 
     function openCommandPalette() {
         commandPaletteOpen.set(true);
@@ -20,7 +19,6 @@
     }
 
     function openSongsView() {
-        favoritesOpenRequest.update((value) => value + 1);
         activeLibraryView.set("songs");
     }
 </script>
@@ -39,7 +37,7 @@
                 <div
                     class="absolute inset-0 rounded-lg bg-transparent scale-125"
                 ></div>
-                <Menu
+                <House
                     class="w-5 h-5 relative z-10 {$activeLibraryView ===
                     'library'
                         ? 'text-white'

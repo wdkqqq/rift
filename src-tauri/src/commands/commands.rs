@@ -2,6 +2,7 @@ use crate::config::config::{load_config, save_config, Config};
 use crate::discord::rpc::DiscordRpcService;
 use crate::music::library::MusicLibrary;
 use crate::music::playback::{PlaybackService, PlaybackState};
+use crate::playlists::store::PlaylistStore;
 use tauri::State;
 
 #[tauri::command]
@@ -102,4 +103,67 @@ pub fn set_app_config(config: Config, rpc: State<DiscordRpcService>) -> Config {
     save_config(&config);
     rpc.set_enabled(config.discord_rpc);
     config
+}
+
+#[tauri::command]
+pub fn get_playlists(
+    playlists: State<PlaylistStore>,
+) -> Result<Vec<crate::models::models::Playlist>, String> {
+    let records = playlists.get_all()?;
+    Ok(records
+        .into_iter()
+        .map(|playlist| crate::models::models::Playlist {
+            slug: playlist.slug,
+            name: playlist.name,
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn get_playlist_tracks(
+    playlist_slug: String,
+    playlists: State<PlaylistStore>,
+    library: State<MusicLibrary>,
+) -> Result<Vec<crate::models::models::Song>, String> {
+    let paths = playlists.get_track_paths(&playlist_slug)?;
+    let mut songs = Vec::new();
+
+    for path in paths {
+        if let Some(song) = library.by_path(&path) {
+            songs.push(song);
+        }
+    }
+
+    Ok(songs)
+}
+
+#[tauri::command]
+pub fn add_track_to_playlist(
+    playlist_slug: String,
+    track_path: String,
+    playlists: State<PlaylistStore>,
+    library: State<MusicLibrary>,
+) -> Result<bool, String> {
+    if library.by_path(&track_path).is_none() {
+        return Err("Track was not found in indexed library".to_string());
+    }
+
+    playlists.add_track(&playlist_slug, &track_path)
+}
+
+#[tauri::command]
+pub fn remove_track_from_playlist(
+    playlist_slug: String,
+    track_path: String,
+    playlists: State<PlaylistStore>,
+) -> Result<bool, String> {
+    playlists.remove_track(&playlist_slug, &track_path)
+}
+
+#[tauri::command]
+pub fn get_track_playlist_memberships(
+    track_path: String,
+    playlists: State<PlaylistStore>,
+) -> Result<Vec<String>, String> {
+    playlists.playlist_slugs_for_track(&track_path)
 }

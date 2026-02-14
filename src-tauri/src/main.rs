@@ -6,11 +6,13 @@ mod config;
 mod discord;
 mod models;
 mod music;
+mod playlists;
 
 use commands::commands::*;
 use discord::rpc::DiscordRpcService;
 use music::library::MusicLibrary;
 use music::playback::PlaybackService;
+use playlists::store::PlaylistStore;
 
 use tauri_plugin_fs::init;
 
@@ -27,11 +29,13 @@ fn main() {
     let music_library = MusicLibrary::new();
     let playback_service = PlaybackService::start();
     let discord_rpc_service = DiscordRpcService::start();
+    let playlist_store = PlaylistStore::new();
 
     tauri::Builder::default()
         .manage(music_library)
         .manage(playback_service)
         .manage(discord_rpc_service)
+        .manage(playlist_store)
         .plugin(init())
         .invoke_handler(tauri::generate_handler![
             search_music,
@@ -44,7 +48,12 @@ fn main() {
             playback_set_volume,
             playback_get_state,
             get_app_config,
-            set_app_config
+            set_app_config,
+            get_playlists,
+            get_playlist_tracks,
+            add_track_to_playlist,
+            remove_track_from_playlist,
+            get_track_playlist_memberships
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

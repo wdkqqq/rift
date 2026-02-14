@@ -14,6 +14,7 @@
     import {
         activeLibraryView,
         favoritesOpenRequest,
+        playlistsRefreshToken,
         playbackIndex,
         playbackQueue,
     } from "../stores/app";
@@ -39,30 +40,12 @@
         tracks: SongWithCover[];
     };
 
-    const favoriteTracksMock: SongWithCover[] = [
-        {
-            title: "Bad for Business",
-            subtitle: "Sabrina Carpenter",
-            album: "emails i can't send",
-            duration: "3:20",
-            cover: "",
-            path: "__mock_1__",
-            coverUrl: null,
-        },
-        {
-            title: "Save Your Tears",
-            subtitle: "The Weeknd",
-            album: "After Hours",
-            duration: "3:35",
-            cover: "",
-            path: "__mock_2__",
-            coverUrl: null,
-        },
-    ];
+    const FAVORITES_SLUG = "favorites-tracks";
 
     const coverUrlCache = new Map<string, string>();
 
     let albums: AlbumGroup[] = [];
+    let favoritesTracks: SongWithCover[] = [];
     let libraryMode: "home" | "album" = "home";
     let activeAlbumId: string | null = null;
     let isLibraryLoading = false;
@@ -74,6 +57,7 @@
     let queuedView: "songs" | "library" | "detail" | null = null;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
     let lastFavoritesRequest = 0;
+    let lastPlaylistRefreshToken = 0;
     let hoveredTrackPath: string | null = null;
     let pausedTrackPath: string | null = null;
     let libraryContentStyle =
@@ -93,7 +77,7 @@
     $: selectedTracks =
         libraryMode === "album"
             ? (selectedAlbum?.tracks ?? [])
-            : favoriteTracksMock;
+            : favoritesTracks;
     $: selectedTitle =
         libraryMode === "album"
             ? (selectedAlbum?.title ?? "Album")
@@ -101,7 +85,7 @@
     $: selectedSubtitle =
         libraryMode === "album"
             ? `${selectedAlbum?.artist ?? "Unknown Artist"} • ${selectedTracks.length} tracks`
-            : "12 minutes • 2 songs";
+            : `${sumDurations(selectedTracks)} • ${selectedTracks.length} songs`;
     $: selectedCoverUrl =
         libraryMode === "album" ? (selectedAlbum?.coverUrl ?? null) : null;
 
@@ -109,6 +93,21 @@
         return new Promise<void>((resolve) => {
             transitionTimer = setTimeout(resolve, ms);
         });
+    }
+
+    function sumDurations(tracks: SongWithCover[]): string {
+        let totalSeconds = 0;
+        for (const track of tracks) {
+            totalSeconds += parseDuration(track.duration);
+        }
+        const minutes = Math.round(totalSeconds / 60);
+        return `${minutes} minutes`;
+    }
+
+    function parseDuration(duration: string): number {
+        const [mins, secs] = duration.split(":").map((value) => Number(value));
+        if (!Number.isFinite(mins) || !Number.isFinite(secs)) return 0;
+        return mins * 60 + secs;
     }
 
     async function animateViewSwitch(nextView: "songs" | "library" | "detail") {
@@ -271,6 +270,22 @@
         }
     }
 
+    async function loadFavoriteTracks() {
+        try {
+            const songs = await invoke<LibrarySong[]>("get_playlist_tracks", {
+                playlistSlug: FAVORITES_SLUG,
+            });
+            favoritesTracks = await Promise.all(
+                songs.map(async (song) => ({
+                    ...song,
+                    coverUrl: await getCoverUrl(song.cover),
+                })),
+            );
+        } catch {
+            favoritesTracks = [];
+        }
+    }
+
     function openFavoriteTracks() {
         libraryMode = "home";
         activeAlbumId = null;
@@ -344,8 +359,14 @@
         activeAlbumId = null;
     }
 
+    $: if ($playlistsRefreshToken !== lastPlaylistRefreshToken) {
+        lastPlaylistRefreshToken = $playlistsRefreshToken;
+        void loadFavoriteTracks();
+    }
+
     onMount(() => {
         loadAlbums();
+        void loadFavoriteTracks();
         window.addEventListener("popstate", handlePopState);
     });
 
@@ -410,7 +431,7 @@
                                         Favorite songs
                                     </p>
                                     <p class="text-xs text-secondary">
-                                        2 songs
+                                        {favoritesTracks.length} songs
                                     </p>
                                 </button>
                             </div>

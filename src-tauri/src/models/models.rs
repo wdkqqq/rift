@@ -9,3 +9,9 @@ pub struct Song {
     pub cover: String,
     pub path: String,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Playlist {
+    pub slug: String,
+    pub name: String,
+}

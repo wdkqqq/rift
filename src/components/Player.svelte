@@ -12,9 +12,17 @@
         PlusCircle,
         Search,
         Heart,
+        Check,
         Volume2,
     } from "lucide-svelte";
-    import { playbackIndex, playbackQueue } from "../stores/app";
+    import {
+        notifyError,
+        notifyInfo,
+        notifySuccess,
+        playbackIndex,
+        playbackQueue,
+        refreshPlaylists,
+    } from "../stores/app";
 
     type PlaybackState = {
         is_loaded: boolean;
@@ -38,13 +46,14 @@
     let playlistPopoverOpen = false;
     let playlistSearch = "";
     let playlistPopoverElement: HTMLDivElement | null = null;
+    let playlistMemberships = new Set<string>();
 
-    const playlists = [
-        {
-            id: "favorite-songs",
-            name: "Favorite Songs",
-        },
-    ];
+    type Playlist = {
+        slug: string;
+        name: string;
+    };
+
+    let playlists: Playlist[] = [];
 
     $: currentTrack = $playbackQueue[$playbackIndex] ?? null;
     $: progressPercent =
@@ -243,8 +252,75 @@
         }
     }
 
-    function handlePlaylistPick() {
-        // Placeholder: action intentionally not implemented yet.
+    async function loadPlaylists() {
+        try {
+            playlists = await invoke<Playlist[]>("get_playlists");
+        } catch (error) {
+            console.error("Failed to load playlists:", error);
+            playlists = [];
+        }
+    }
+
+    async function handlePlaylistPick(playlist: Playlist) {
+        if (!currentTrack) return;
+        const isInPlaylist = playlistMemberships.has(playlist.slug);
+
+        try {
+            if (isInPlaylist) {
+                const removed = await invoke<boolean>(
+                    "remove_track_from_playlist",
+                    {
+                        playlistSlug: playlist.slug,
+                        trackPath: currentTrack.path,
+                    },
+                );
+                if (removed) {
+                    playlistMemberships = new Set(
+                        [...playlistMemberships].filter(
+                            (slug) => slug !== playlist.slug,
+                        ),
+                    );
+                    notifySuccess(`Removed from ${playlist.name}`);
+                    refreshPlaylists();
+                } else {
+                    notifyInfo(`Track is not in ${playlist.name}`);
+                }
+            } else {
+                const added = await invoke<boolean>("add_track_to_playlist", {
+                    playlistSlug: playlist.slug,
+                    trackPath: currentTrack.path,
+                });
+
+                if (added) {
+                    playlistMemberships = new Set([
+                        ...playlistMemberships,
+                        playlist.slug,
+                    ]);
+                    notifySuccess(`Added to ${playlist.name}`);
+                    refreshPlaylists();
+                } else {
+                    notifyInfo(`Track is already in ${playlist.name}`);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to add track to playlist:", error);
+            notifyError("Failed to update playlist");
+        }
+    }
+
+    async function loadTrackMemberships(trackPath: string) {
+        try {
+            const slugs = await invoke<string[]>(
+                "get_track_playlist_memberships",
+                {
+                    trackPath,
+                },
+            );
+            playlistMemberships = new Set(slugs);
+        } catch (error) {
+            console.error("Failed to load playlist memberships:", error);
+            playlistMemberships = new Set();
+        }
     }
 
     function handleGlobalPointerDown(event: MouseEvent) {
@@ -265,6 +341,7 @@
     }
 
     onMount(() => {
+        void loadPlaylists();
         pollTimer = setInterval(() => {
             void syncState();
         }, 500);
@@ -278,6 +355,10 @@
             document.removeEventListener("keydown", handleGlobalKeydown);
         };
     });
+
+    $: if (playlistPopoverOpen && currentTrack?.path) {
+        void loadTrackMemberships(currentTrack.path);
+    }
 
     onDestroy(() => {
         if (pollTimer) clearInterval(pollTimer);
@@ -362,8 +443,14 @@
                                             <button
                                                 type="button"
                                                 class="w-full text-left px-2 py-2 rounded-md text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
-                                                role="menuitem"
-                                                on:click={handlePlaylistPick}
+                                                role="menuitemcheckbox"
+                                                aria-checked={playlistMemberships.has(
+                                                    playlist.slug,
+                                                )}
+                                                on:click={() =>
+                                                    handlePlaylistPick(
+                                                        playlist,
+                                                    )}
                                             >
                                                 <div
                                                     class="h-8 w-8 rounded bg-hover shrink-0 flex items-center justify-center"
@@ -376,6 +463,11 @@
                                                 <span class="truncate"
                                                     >{playlist.name}</span
                                                 >
+                                                {#if playlistMemberships.has(playlist.slug)}
+                                                    <Check
+                                                        class="h-4 w-4 ml-auto text-white"
+                                                    />
+                                                {/if}
                                             </button>
                                         {/each}
                                     {:else}

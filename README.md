@@ -15,10 +15,6 @@
         title="Interface" alt="Screenshot" width="700" />
 </div>
 
-> [!WARNING]
-> Project on hold. Development is temporarily paused, so bugs are expected.
-> Contributions are highly welcome! PRs and Issues are appreciated to help keep the project alive.    
-
 ## Build from source
 ### Requirements
 -   [Node.js](https://nodejs.org/)

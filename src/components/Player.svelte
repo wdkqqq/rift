@@ -9,6 +9,8 @@
         SkipForward,
         Repeat,
         Repeat1,
+        PlusCircle,
+        Search,
         Heart,
         Volume2,
     } from "lucide-svelte";
@@ -33,12 +35,27 @@
     let isAdvancing = false;
     let isSyncing = false;
     let repeatMode: "off" | "all" | "one" = "off";
+    let playlistPopoverOpen = false;
+    let playlistSearch = "";
+    let playlistPopoverElement: HTMLDivElement | null = null;
+
+    const playlists = [
+        {
+            id: "favorite-songs",
+            name: "Favorite Songs",
+        },
+    ];
 
     $: currentTrack = $playbackQueue[$playbackIndex] ?? null;
     $: progressPercent =
         duration > 0 ? `${(effectiveCurrentTime / duration) * 100}%` : "0%";
     $: volumePercent = `${volume}%`;
     $: effectiveCurrentTime = isSeeking ? seekPreview : currentTime;
+    $: filteredPlaylists = playlists.filter((playlist) =>
+        playlist.name
+            .toLowerCase()
+            .includes(playlistSearch.trim().toLowerCase()),
+    );
 
     $: if (currentTrack?.path && currentTrack.path !== lastLoadedPath) {
         void loadAndPlay(currentTrack.path);
@@ -219,14 +236,53 @@
         return `${mins}:${String(secs).padStart(2, "0")}`;
     }
 
+    function togglePlaylistPopover() {
+        playlistPopoverOpen = !playlistPopoverOpen;
+        if (!playlistPopoverOpen) {
+            playlistSearch = "";
+        }
+    }
+
+    function handlePlaylistPick() {
+        // Placeholder: action intentionally not implemented yet.
+    }
+
+    function handleGlobalPointerDown(event: MouseEvent) {
+        if (!playlistPopoverOpen) return;
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+
+        if (playlistPopoverElement?.contains(target)) return;
+        playlistPopoverOpen = false;
+        playlistSearch = "";
+    }
+
+    function handleGlobalKeydown(event: KeyboardEvent) {
+        if (event.key === "Escape") {
+            playlistPopoverOpen = false;
+            playlistSearch = "";
+        }
+    }
+
     onMount(() => {
         pollTimer = setInterval(() => {
             void syncState();
         }, 500);
+
+        document.addEventListener("mousedown", handleGlobalPointerDown);
+        document.addEventListener("keydown", handleGlobalKeydown);
+
+        return () => {
+            if (pollTimer) clearInterval(pollTimer);
+            document.removeEventListener("mousedown", handleGlobalPointerDown);
+            document.removeEventListener("keydown", handleGlobalKeydown);
+        };
     });
 
     onDestroy(() => {
         if (pollTimer) clearInterval(pollTimer);
+        document.removeEventListener("mousedown", handleGlobalPointerDown);
+        document.removeEventListener("keydown", handleGlobalKeydown);
     });
 </script>
 
@@ -269,11 +325,70 @@
                             {currentTrack.subtitle}
                         </div>
                     </div>
-                    <button
-                        class="text-secondary hover:text-white transition-colors p-1 active:scale-90 [transition:all_0.2s_ease]"
-                    >
-                        <Heart class="h-4 w-4" />
-                    </button>
+                    <div class="relative" bind:this={playlistPopoverElement}>
+                        <button
+                            class="text-secondary hover:text-white transition-colors p-1 [transition:all_0.2s_ease]"
+                            aria-label="Add to playlist"
+                            aria-haspopup="menu"
+                            aria-expanded={playlistPopoverOpen}
+                            on:click={togglePlaylistPopover}
+                        >
+                            <PlusCircle class="h-4 w-4" />
+                        </button>
+
+                        {#if playlistPopoverOpen}
+                            <div
+                                class="absolute left-0 bottom-full mb-2 w-64 rounded-lg border border-border bg-background [box-shadow:0_12px_28px_rgba(0,0,0,0.35)] p-2 z-30"
+                                role="menu"
+                                aria-label="Choose playlist"
+                            >
+                                <div
+                                    class="flex items-center gap-2 rounded-md border border-divider px-2 py-1.5 mb-2"
+                                >
+                                    <Search
+                                        class="h-3.5 w-3.5 text-secondary"
+                                    />
+                                    <input
+                                        type="text"
+                                        class="w-full bg-transparent text-sm text-white placeholder:text-[#8a8a8a] focus:outline-none"
+                                        placeholder="Search playlists"
+                                        bind:value={playlistSearch}
+                                    />
+                                </div>
+
+                                <div class="max-h-48 overflow-y-auto">
+                                    {#if filteredPlaylists.length > 0}
+                                        {#each filteredPlaylists as playlist}
+                                            <button
+                                                type="button"
+                                                class="w-full text-left px-2 py-2 rounded-md text-sm text-white hover:bg-white/10 transition-colors flex items-center gap-2"
+                                                role="menuitem"
+                                                on:click={handlePlaylistPick}
+                                            >
+                                                <div
+                                                    class="h-8 w-8 rounded bg-hover shrink-0 flex items-center justify-center"
+                                                >
+                                                    <Heart
+                                                        fill="currentColor"
+                                                        class="h-4 w-4 text-tertiary"
+                                                    />
+                                                </div>
+                                                <span class="truncate"
+                                                    >{playlist.name}</span
+                                                >
+                                            </button>
+                                        {/each}
+                                    {:else}
+                                        <div
+                                            class="px-2 py-2 text-sm text-secondary"
+                                        >
+                                            No playlists found
+                                        </div>
+                                    {/if}
+                                </div>
+                            </div>
+                        {/if}
+                    </div>
                 </div>
             {/if}
         </div>

@@ -4,7 +4,11 @@
     import { invoke } from "@tauri-apps/api/core";
     import { appCacheDir } from "@tauri-apps/api/path";
     import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
-    import { activeLibraryView, libraryHomeRequest } from "../stores/app";
+    import {
+        activeLibraryView,
+        favoritesOpenRequest,
+        libraryHomeRequest,
+    } from "../stores/app";
 
     type LibrarySong = {
         title: string;
@@ -26,10 +30,6 @@
         coverUrl: string | null;
         tracks: SongWithCover[];
     };
-
-    type Selection =
-        | { type: "playlist"; id: "favorites" }
-        | { type: "album"; id: string };
 
     const favoriteTracksMock: SongWithCover[] = [
         {
@@ -55,7 +55,6 @@
     const coverUrlCache = new Map<string, string>();
 
     let albums: AlbumGroup[] = [];
-    let selected: Selection = { type: "playlist", id: "favorites" };
     let libraryMode: "home" | "album" = "home";
     let activeAlbumId: string | null = null;
     let isLibraryLoading = false;
@@ -67,6 +66,7 @@
     let queuedView: "songs" | "library" | null = null;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
     let lastHomeRequest = 0;
+    let lastFavoritesRequest = 0;
     let libraryContentStyle =
         "opacity: 1; transform: translateY(0); transition: opacity 240ms ease, transform 240ms ease;";
     let isLibraryAnimating = false;
@@ -261,7 +261,8 @@
     }
 
     function openFavoriteTracks() {
-        selected = { type: "playlist", id: "favorites" };
+        libraryMode = "home";
+        activeAlbumId = null;
         activeLibraryView.set("songs");
     }
 
@@ -305,6 +306,12 @@
     $: if ($libraryHomeRequest !== lastHomeRequest) {
         lastHomeRequest = $libraryHomeRequest;
         openLibraryHome();
+    }
+
+    $: if ($favoritesOpenRequest !== lastFavoritesRequest) {
+        lastFavoritesRequest = $favoritesOpenRequest;
+        libraryMode = "home";
+        activeAlbumId = null;
     }
 
     onMount(() => {
@@ -534,7 +541,7 @@
                                 alt={selectedTitle}
                                 class="w-full h-full object-cover"
                             />
-                        {:else if selected.type === "album"}
+                        {:else if libraryMode === "album"}
                             <Music class="h-17 w-17 text-tertiary" />
                         {:else}
                             <Heart
@@ -545,7 +552,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-medium text-secondary">
-                            {selected.type === "album" ? "Album" : "Playlist"}
+                            {libraryMode === "album" ? "Album" : "Playlist"}
                         </p>
                         <h1 class="text-7xl font-bold mt-2 mb-4">
                             {selectedTitle}

@@ -2,6 +2,7 @@
     import {
         activeLibraryView,
         commandPaletteOpen,
+        favoritesOpenRequest,
         libraryHomeRequest,
         settingsPanelOpen,
     } from "../stores/app";
@@ -24,6 +25,7 @@
     }
 
     function openSongsView() {
+        favoritesOpenRequest.update((value) => value + 1);
         activeLibraryView.set("songs");
     }
 </script>

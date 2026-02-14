@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Heart, Music, Play, Plus } from "lucide-svelte";
+    import { Heart, Music, Pause, Play, Plus } from "lucide-svelte";
     import { onDestroy, onMount, tick } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { appCacheDir } from "@tauri-apps/api/path";
@@ -69,6 +69,8 @@
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
     let lastHomeRequest = 0;
     let lastFavoritesRequest = 0;
+    let hoveredTrackPath: string | null = null;
+    let pausedTrackPath: string | null = null;
     let libraryContentStyle =
         "opacity: 1; transform: translateY(0); transition: opacity 240ms ease, transform 240ms ease;";
     let isLibraryAnimating = false;
@@ -285,8 +287,6 @@
     }
 
     function playTrack(trackIndex: number) {
-        if (libraryMode !== "album") return;
-
         const queue = selectedTracks.map((track) => ({
             title: track.title,
             subtitle: track.subtitle,
@@ -485,21 +485,96 @@
                                 {#each selectedTracks as song, index (song.path)}
                                     <div
                                         class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
-                                        on:click={() => playTrack(index)}
+                                        on:mouseenter={() =>
+                                            (hoveredTrackPath = song.path)}
+                                        on:mouseleave={() => {
+                                            if (
+                                                hoveredTrackPath === song.path
+                                            ) {
+                                                hoveredTrackPath = null;
+                                            }
+                                        }}
                                     >
                                         <div
                                             class="col-span-8 flex items-center"
                                         >
                                             <div
-                                                class="w-16 flex items-center justify-center"
+                                                class="w-16 h-7 relative flex items-center justify-center"
                                             >
-                                                <span
-                                                    class="text-secondary group-hover:hidden"
-                                                    >{index + 1}</span
+                                                {#if $playbackQueue[$playbackIndex]?.path === song.path && pausedTrackPath !== song.path && hoveredTrackPath !== song.path}
+                                                    <div
+                                                        class="music-eq"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <span></span>
+                                                        <span></span>
+                                                        <span></span>
+                                                    </div>
+                                                {:else}
+                                                    <span
+                                                        class="text-secondary group-hover:hidden"
+                                                    >
+                                                        {index + 1}
+                                                    </span>
+                                                {/if}
+                                                <button
+                                                    type="button"
+                                                    class="absolute inset-0 hidden group-hover:flex items-center justify-center text-white"
+                                                    aria-label={$playbackQueue[
+                                                        $playbackIndex
+                                                    ]?.path === song.path &&
+                                                    pausedTrackPath !==
+                                                        song.path
+                                                        ? "Pause track"
+                                                        : "Play track"}
+                                                    on:click|stopPropagation={() => {
+                                                        const isCurrent =
+                                                            $playbackQueue[
+                                                                $playbackIndex
+                                                            ]?.path ===
+                                                            song.path;
+                                                        if (
+                                                            isCurrent &&
+                                                            pausedTrackPath !==
+                                                                song.path
+                                                        ) {
+                                                            pausedTrackPath =
+                                                                song.path;
+                                                            void invoke(
+                                                                "playback_pause",
+                                                            );
+                                                            return;
+                                                        }
+                                                        if (
+                                                            isCurrent &&
+                                                            pausedTrackPath ===
+                                                                song.path
+                                                        ) {
+                                                            pausedTrackPath =
+                                                                null;
+                                                            void invoke(
+                                                                "playback_play",
+                                                            );
+                                                            return;
+                                                        }
+                                                        pausedTrackPath = null;
+                                                        playTrack(index);
+                                                        void invoke(
+                                                            "playback_load_and_play",
+                                                            {
+                                                                path: song.path,
+                                                            },
+                                                        );
+                                                    }}
                                                 >
-                                                <Play
-                                                    class="h-4 w-4 hidden group-hover:block text-white"
-                                                />
+                                                    {#if $playbackQueue[$playbackIndex]?.path === song.path && pausedTrackPath !== song.path}
+                                                        <Pause
+                                                            class="h-4 w-4"
+                                                        />
+                                                    {:else}
+                                                        <Play class="h-4 w-4" />
+                                                    {/if}
+                                                </button>
                                             </div>
                                             <div
                                                 class="flex items-center flex-1"
@@ -643,19 +718,86 @@
                         {#each selectedTracks as song, index (song.path)}
                             <div
                                 class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
-                                on:click={() => playTrack(index)}
+                                on:mouseenter={() =>
+                                    (hoveredTrackPath = song.path)}
+                                on:mouseleave={() => {
+                                    if (hoveredTrackPath === song.path) {
+                                        hoveredTrackPath = null;
+                                    }
+                                }}
                             >
                                 <div class="col-span-8 flex items-center">
                                     <div
-                                        class="w-16 flex items-center justify-center"
+                                        class="w-16 h-7 relative flex items-center justify-center"
                                     >
-                                        <span
-                                            class="text-secondary group-hover:hidden"
-                                            >{index + 1}</span
+                                        {#if $playbackQueue[$playbackIndex]?.path === song.path && pausedTrackPath !== song.path && hoveredTrackPath !== song.path}
+                                            <div
+                                                class="music-eq"
+                                                aria-hidden="true"
+                                            >
+                                                <span></span>
+                                                <span></span>
+                                                <span></span>
+                                            </div>
+                                        {:else}
+                                            <span
+                                                class="text-secondary group-hover:hidden"
+                                            >
+                                                {index + 1}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            type="button"
+                                            class="absolute inset-0 hidden group-hover:flex items-center justify-center text-white"
+                                            aria-label={$playbackQueue[
+                                                $playbackIndex
+                                            ]?.path === song.path &&
+                                            pausedTrackPath !== song.path
+                                                ? "Pause track"
+                                                : "Play track"}
+                                            on:click|stopPropagation={() => {
+                                                const isCurrent =
+                                                    $playbackQueue[
+                                                        $playbackIndex
+                                                    ]?.path === song.path;
+                                                if (
+                                                    isCurrent &&
+                                                    pausedTrackPath !==
+                                                        song.path
+                                                ) {
+                                                    pausedTrackPath = song.path;
+                                                    void invoke(
+                                                        "playback_pause",
+                                                    );
+                                                    return;
+                                                }
+                                                if (
+                                                    isCurrent &&
+                                                    pausedTrackPath ===
+                                                        song.path
+                                                ) {
+                                                    pausedTrackPath = null;
+                                                    void invoke(
+                                                        "playback_play",
+                                                    );
+                                                    return;
+                                                }
+                                                pausedTrackPath = null;
+                                                playTrack(index);
+                                                void invoke(
+                                                    "playback_load_and_play",
+                                                    {
+                                                        path: song.path,
+                                                    },
+                                                );
+                                            }}
                                         >
-                                        <Play
-                                            class="h-4 w-4 hidden group-hover:block text-white"
-                                        />
+                                            {#if $playbackQueue[$playbackIndex]?.path === song.path && pausedTrackPath !== song.path}
+                                                <Pause class="h-4 w-4" />
+                                            {:else}
+                                                <Play class="h-4 w-4" />
+                                            {/if}
+                                        </button>
                                     </div>
                                     <div class="flex items-center flex-1">
                                         <div
@@ -701,3 +843,43 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .music-eq {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 14px;
+    }
+
+    .music-eq span {
+        width: 3px;
+        border-radius: 999px;
+        background: currentColor;
+        animation: music-eq 0.95s ease-in-out infinite;
+    }
+
+    .music-eq span:nth-child(1) {
+        animation-delay: -0.25s;
+    }
+
+    .music-eq span:nth-child(2) {
+        animation-delay: -0.1s;
+    }
+
+    .music-eq span:nth-child(3) {
+        animation-delay: -0.35s;
+    }
+
+    @keyframes music-eq {
+        0%,
+        100% {
+            height: 4px;
+            opacity: 0.55;
+        }
+        50% {
+            height: 13px;
+            opacity: 1;
+        }
+    }
+</style>

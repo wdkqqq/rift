@@ -2,6 +2,7 @@ use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 use serde::Serialize;
 use std::fs::File;
 use std::io::BufReader;
+use std::path::Path;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -194,6 +195,7 @@ struct PlaybackController {
     sink: Sink,
     path: Option<String>,
     duration: f64,
+    position_offset: f64,
     paused: bool,
     volume: f32,
 }
@@ -211,6 +213,7 @@ impl PlaybackController {
             sink,
             path: None,
             duration: 0.0,
+            position_offset: 0.0,
             paused: true,
             volume: 0.7,
         })
@@ -243,15 +246,23 @@ impl PlaybackController {
             return Ok(self.state());
         }
 
-        let clamped = position_seconds.max(0.0).min(self.duration.max(0.0));
-        if self
-            .sink
-            .try_seek(Duration::from_secs_f64(clamped))
-            .is_err()
-        {
-            let should_play = !self.paused;
-            self.rebuild_sink(clamped, should_play)?;
+        let clamped = if self.duration > 0.0 {
+            position_seconds.max(0.0).min(self.duration)
+        } else {
+            position_seconds.max(0.0)
+        };
+        let should_play = !self.paused;
+        let target = Duration::from_secs_f64(clamped);
+
+        // Fast path is safe only when source starts from 0.
+        if self.position_offset == 0.0 && self.sink.try_seek(target).is_ok() {
+            let reported = self.sink.get_pos().as_secs_f64();
+            if (reported - clamped).abs() <= 1.0 {
+                return Ok(self.state());
+            }
         }
+
+        self.rebuild_sink(clamped, should_play)?;
         Ok(self.state())
     }
 
@@ -300,6 +311,7 @@ impl PlaybackController {
         } else {
             offset_seconds.max(0.0)
         };
+        self.position_offset = clamped_offset;
 
         self.sink.stop();
         self.sink = Sink::try_new(&self.handle)
@@ -324,9 +336,11 @@ impl PlaybackController {
             return 0.0;
         }
 
-        self.sink
-            .get_pos()
-            .as_secs_f64()
-            .min(self.duration.max(0.0))
+        let absolute = self.position_offset + self.sink.get_pos().as_secs_f64();
+        if self.duration > 0.0 {
+            absolute.min(self.duration)
+        } else {
+            absolute
+        }
     }
 }

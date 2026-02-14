@@ -14,7 +14,6 @@
     import {
         activeLibraryView,
         favoritesOpenRequest,
-        libraryHomeRequest,
         playbackIndex,
         playbackQueue,
     } from "../stores/app";
@@ -68,13 +67,12 @@
     let activeAlbumId: string | null = null;
     let isLibraryLoading = false;
 
-    let displayedView: "songs" | "library" = "songs";
+    let displayedView: "songs" | "library" | "detail" = "songs";
     let viewStyle =
         "opacity: 1; transform: translateY(0); transition: all 0.3s ease-in-out;";
     let isAnimating = false;
-    let queuedView: "songs" | "library" | null = null;
+    let queuedView: "songs" | "library" | "detail" | null = null;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastHomeRequest = 0;
     let lastFavoritesRequest = 0;
     let hoveredTrackPath: string | null = null;
     let pausedTrackPath: string | null = null;
@@ -113,7 +111,7 @@
         });
     }
 
-    async function animateViewSwitch(nextView: "songs" | "library") {
+    async function animateViewSwitch(nextView: "songs" | "library" | "detail") {
         if (isAnimating) {
             queuedView = nextView;
             return;
@@ -276,7 +274,7 @@
     function openFavoriteTracks() {
         libraryMode = "home";
         activeAlbumId = null;
-        activeLibraryView.set("songs");
+        activeLibraryView.set("detail");
     }
 
     function scrollLibraryRow(row: "playlists" | "albums", direction: -1 | 1) {
@@ -297,14 +295,7 @@
             "",
         );
         animateLibraryModeSwitch("album", album.key);
-    }
-
-    function openLibraryHome() {
-        if (window.history.state?.riftView === "library-album") {
-            window.history.back();
-            return;
-        }
-        animateLibraryModeSwitch("home", null);
+        activeLibraryView.set("detail");
     }
 
     function playTrack(trackIndex: number) {
@@ -327,7 +318,7 @@
             state?.riftView === "library-album" &&
             typeof state.albumId === "string"
         ) {
-            activeLibraryView.set("library");
+            activeLibraryView.set("detail");
             animateLibraryModeSwitch("album", state.albumId);
             return;
         }
@@ -342,9 +333,9 @@
         animateViewSwitch($activeLibraryView);
     }
 
-    $: if ($libraryHomeRequest !== lastHomeRequest) {
-        lastHomeRequest = $libraryHomeRequest;
-        openLibraryHome();
+    $: if ($activeLibraryView === "library" && libraryMode !== "home") {
+        libraryMode = "home";
+        activeAlbumId = null;
     }
 
     $: if ($favoritesOpenRequest !== lastFavoritesRequest) {

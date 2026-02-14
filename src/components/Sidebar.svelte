@@ -26,7 +26,7 @@
 </script>
 
 <div
-    class="pt-5 shrink-0 flex flex-col items-start justify-between border-r border-divider h-full bg-background relative transition-all group"
+    class="pt-3 shrink-0 flex flex-col items-start justify-between border-r border-divider h-full bg-background relative transition-all group"
 >
     <div class="flex flex-col w-full px-4 space-y-1">
         <!-- Library Button -->
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Settings Button -->
-    <div class="flex flex-col w-full px-4 space-y-5 pb-5">
+    <div class="flex flex-col w-full px-4 space-y-5 pb-3">
         <div
             on:click={openSettingsPanel}
             class="active:scale-90 [transition:all_0.2s_ease] group flex items-center space-x-3 p-1 rounded-lg hover:bg-hover"

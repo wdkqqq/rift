@@ -95,11 +95,6 @@ body.macos-traffic-lights .window-decor-strip {
     border-bottom: 1px solid var(--color-border);
 }
 
-body.macos-traffic-lights .window-decor-drag {
-    position: absolute;
-    inset: 0;
-}
-
 body.macos-traffic-lights .window-nav-controls {
     position: relative;
     z-index: 1;

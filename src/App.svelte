@@ -1,5 +1,6 @@
 <script>
     import { onMount } from "svelte";
+    import { getCurrentWindow } from "@tauri-apps/api/window";
     import { commandPaletteOpen, settingsPanelOpen } from "./stores/app.ts";
 
     import "./main.css";
@@ -38,6 +39,24 @@
         window.history.forward();
     }
 
+    async function handleTopBarMouseDown(event) {
+        if (event.button !== 0) return;
+
+        const target = event.target;
+        if (
+            target instanceof HTMLElement &&
+            target.closest(".window-nav-button")
+        ) {
+            return;
+        }
+
+        try {
+            await getCurrentWindow().startDragging();
+        } catch (error) {
+            console.error("Failed to start window dragging", error);
+        }
+    }
+
     let isMac = false;
 
     onMount(() => {
@@ -70,8 +89,7 @@
     class="app-shell bg-background text-white h-screen flex flex-col overflow-hidden"
 >
     {#if isMac}
-        <div class="window-decor-strip">
-            <div class="window-decor-drag" data-tauri-drag-region></div>
+        <div class="window-decor-strip" on:mousedown={handleTopBarMouseDown}>
             <div class="window-nav-controls">
                 <button
                     type="button"

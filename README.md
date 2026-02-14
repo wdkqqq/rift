@@ -15,6 +15,9 @@
         title="Interface" alt="Screenshot" width="700" />
 </div>
 
+> [!WARNING]
+> Project is still in a raw early stage. Expect rough edges, incomplete features, and breaking changes.
+
 ## Build from source
 ### Requirements
 -   [Node.js](https://nodejs.org/)

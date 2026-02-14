@@ -1,5 +1,12 @@
 <script lang="ts">
-    import { Heart, Music, Pause, Play, Plus } from "lucide-svelte";
+    import {
+        ChevronLeft,
+        ChevronRight,
+        Heart,
+        Music,
+        Pause,
+        Play,
+    } from "lucide-svelte";
     import { onDestroy, onMount, tick } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { appCacheDir } from "@tauri-apps/api/path";
@@ -78,6 +85,8 @@
         mode: "home" | "album";
         albumId: string | null;
     } | null = null;
+    let playlistRowElement: HTMLDivElement | null = null;
+    let albumRowElement: HTMLDivElement | null = null;
 
     $: selectedAlbum =
         libraryMode === "album" && activeAlbumId
@@ -270,6 +279,18 @@
         activeLibraryView.set("songs");
     }
 
+    function scrollLibraryRow(row: "playlists" | "albums", direction: -1 | 1) {
+        const target =
+            row === "playlists" ? playlistRowElement : albumRowElement;
+        if (!target) return;
+
+        const offset = Math.max(240, Math.round(target.clientWidth * 0.82));
+        target.scrollBy({
+            left: offset * direction,
+            behavior: "smooth",
+        });
+    }
+
     function openAlbum(album: AlbumGroup) {
         window.history.pushState(
             { riftView: "library-album", albumId: album.key },
@@ -346,30 +367,44 @@
     });
 </script>
 
-<div class="flex-1 overflow-auto m-4 ml-0 p-6">
+<div class="flex-1 min-w-0 w-full overflow-auto m-4 ml-0 p-6">
     <div class="playlist-view-switch" style={viewStyle}>
         {#if displayedView === "library"}
-            <div class="max-w-6xl space-y-10">
+            <div class="w-full max-w-6xl space-y-10">
                 <div class="space-y-10" style={libraryContentStyle}>
                     {#if libraryMode === "home"}
                         <section>
                             <div class="mb-4 flex items-center justify-between">
                                 <h2 class="text-xl font-semibold">Playlists</h2>
-                                <button
-                                    type="button"
-                                    class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-hover flex items-center justify-center [transition:all_0.15s_ease]"
-                                    aria-label="Add playlist"
-                                >
-                                    <Plus class="h-4 w-4" />
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                        aria-label="Scroll playlists left"
+                                        on:click={() =>
+                                            scrollLibraryRow("playlists", -1)}
+                                    >
+                                        <ChevronLeft class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                        aria-label="Scroll playlists right"
+                                        on:click={() =>
+                                            scrollLibraryRow("playlists", 1)}
+                                    >
+                                        <ChevronRight class="h-4 w-4" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div
-                                class="grid grid-cols-[repeat(auto-fill,minmax(220px,220px))] gap-4"
+                                bind:this={playlistRowElement}
+                                class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
                             >
                                 <button
                                     type="button"
-                                    class="w-[220px] text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
+                                    class="w-[220px] shrink-0 text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
                                     on:click={openFavoriteTracks}
                                 >
                                     <div
@@ -392,16 +427,41 @@
 
                         {#if albums.length > 0}
                             <section>
-                                <h2 class="mb-4 text-xl font-semibold">
-                                    Albums
-                                </h2>
                                 <div
-                                    class="grid grid-cols-[repeat(auto-fill,minmax(220px,220px))] gap-4"
+                                    class="mb-4 flex items-center justify-between"
+                                >
+                                    <h2 class="text-xl font-semibold">
+                                        Albums
+                                    </h2>
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                            aria-label="Scroll albums left"
+                                            on:click={() =>
+                                                scrollLibraryRow("albums", -1)}
+                                        >
+                                            <ChevronLeft class="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                            aria-label="Scroll albums right"
+                                            on:click={() =>
+                                                scrollLibraryRow("albums", 1)}
+                                        >
+                                            <ChevronRight class="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div
+                                    bind:this={albumRowElement}
+                                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
                                 >
                                     {#each albums as album}
                                         <button
                                             type="button"
-                                            class="w-[220px] text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
+                                            class="w-[220px] shrink-0 text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
                                             on:click={() => openAlbum(album)}
                                         >
                                             <div
@@ -881,5 +941,13 @@
             height: 13px;
             opacity: 1;
         }
+    }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
     }
 </style>

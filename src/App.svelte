@@ -112,7 +112,7 @@
     <div class="app-main flex-1 flex overflow-hidden">
         <Sidebar />
 
-        <div class="flex-1 flex flex-col min-h-0">
+        <div class="flex-1 flex flex-col min-h-0 min-w-0">
             <PlaylistView />
 
             <Player />

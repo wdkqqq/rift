@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          - os: macos-26
             bundle: app
             artifact_glob: src-tauri/target/release/bundle/macos/*.app
             artifact_name: Rift-macOS-app

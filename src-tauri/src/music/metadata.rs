@@ -128,6 +128,10 @@ pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
                 .artist()
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| "Unknown Artist".to_string());
+            let album = tag
+                .album()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "Unknown Album".to_string());
 
             let duration = tagged_file.properties().duration().as_secs();
             let minutes = duration / 60;
@@ -137,6 +141,7 @@ pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
             Some(Song {
                 title,
                 subtitle: artist,
+                album,
                 duration: duration_str,
                 cover: cover_file,
                 path: path.to_string_lossy().to_string(),

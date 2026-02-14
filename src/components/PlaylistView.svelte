@@ -1,63 +1,64 @@
 <script lang="ts">
     import { Heart, Music, Play, Plus } from "lucide-svelte";
-    import { onDestroy, tick } from "svelte";
-    import { activeLibraryView } from "../stores/app";
+    import { onDestroy, onMount, tick } from "svelte";
+    import { invoke } from "@tauri-apps/api/core";
+    import { appCacheDir } from "@tauri-apps/api/path";
+    import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
+    import { activeLibraryView, libraryHomeRequest } from "../stores/app";
 
-    export let title = "Favorite songs";
-    export let description = "12 minutes • 125 songs";
-    export let loading = false;
+    type LibrarySong = {
+        title: string;
+        subtitle: string;
+        album: string;
+        duration: string;
+        cover: string;
+        path: string;
+    };
 
-    const songs = [
+    type SongWithCover = LibrarySong & {
+        coverUrl: string | null;
+    };
+
+    type AlbumGroup = {
+        key: string;
+        title: string;
+        artist: string;
+        coverUrl: string | null;
+        tracks: SongWithCover[];
+    };
+
+    type Selection =
+        | { type: "playlist"; id: "favorites" }
+        | { type: "album"; id: string };
+
+    const favoriteTracksMock: SongWithCover[] = [
         {
-            rank: 1,
             title: "Bad for Business",
-            artist: "Sabrina Carpenter",
+            subtitle: "Sabrina Carpenter",
             album: "emails i can't send",
             duration: "3:20",
+            cover: "",
+            path: "__mock_1__",
+            coverUrl: null,
         },
         {
-            rank: 2,
-            title: "Tears",
-            artist: "Sabrina Carpenter",
-            album: "Man's Best Friend",
+            title: "Save Your Tears",
+            subtitle: "The Weeknd",
+            album: "After Hours",
             duration: "3:35",
+            cover: "",
+            path: "__mock_2__",
+            coverUrl: null,
         },
     ];
 
-    const albums = [
-        {
-            title: "Short n' Sweet",
-            artist: "Sabrina Carpenter",
-        },
-        {
-            title: "emails i can't send",
-            artist: "Sabrina Carpenter",
-        },
-        {
-            title: "BRAT",
-            artist: "Charli XCX",
-        },
-        {
-            title: "Future Nostalgia",
-            artist: "Dua Lipa",
-        },
-        {
-            title: "HOW I'M FEELING NOW",
-            artist: "Charli XCX",
-        },
-        {
-            title: "OIL OF EVERY PEARL'S UN-INSIDES",
-            artist: "SOPHIE",
-        },
-        {
-            title: "Britpop",
-            artist: "A. G. Cook",
-        },
-        {
-            title: "Happier Than Ever",
-            artist: "Billie Eilish",
-        },
-    ];
+    const coverUrlCache = new Map<string, string>();
+
+    let albums: AlbumGroup[] = [];
+    let selected: Selection = { type: "playlist", id: "favorites" };
+    let libraryMode: "home" | "album" = "home";
+    let activeAlbumId: string | null = null;
+    let isLibraryLoading = false;
 
     let displayedView: "songs" | "library" = "songs";
     let viewStyle =
@@ -65,6 +66,33 @@
     let isAnimating = false;
     let queuedView: "songs" | "library" | null = null;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastHomeRequest = 0;
+    let libraryContentStyle =
+        "opacity: 1; transform: translateY(0); transition: opacity 240ms ease, transform 240ms ease;";
+    let isLibraryAnimating = false;
+    let queuedLibraryTarget: {
+        mode: "home" | "album";
+        albumId: string | null;
+    } | null = null;
+
+    $: selectedAlbum =
+        libraryMode === "album" && activeAlbumId
+            ? (albums.find((album) => album.key === activeAlbumId) ?? null)
+            : null;
+    $: selectedTracks =
+        libraryMode === "album"
+            ? (selectedAlbum?.tracks ?? [])
+            : favoriteTracksMock;
+    $: selectedTitle =
+        libraryMode === "album"
+            ? (selectedAlbum?.title ?? "Album")
+            : "Favorite songs";
+    $: selectedSubtitle =
+        libraryMode === "album"
+            ? `${selectedAlbum?.artist ?? "Unknown Artist"} • ${selectedTracks.length} tracks`
+            : "12 minutes • 2 songs";
+    $: selectedCoverUrl =
+        libraryMode === "album" ? (selectedAlbum?.coverUrl ?? null) : null;
 
     function wait(ms: number) {
         return new Promise<void>((resolve) => {
@@ -106,12 +134,190 @@
         }
     }
 
+    async function animateLibraryModeSwitch(
+        nextMode: "home" | "album",
+        albumId: string | null,
+    ) {
+        if (isLibraryAnimating) {
+            queuedLibraryTarget = { mode: nextMode, albumId };
+            return;
+        }
+
+        if (libraryMode === nextMode && activeAlbumId === albumId) return;
+
+        isLibraryAnimating = true;
+        libraryContentStyle =
+            "opacity: 0; transform: translateY(-12px); transition: opacity 150ms ease, transform 150ms ease;";
+        await wait(120);
+
+        libraryMode = nextMode;
+        activeAlbumId = albumId;
+        await tick();
+
+        libraryContentStyle =
+            "opacity: 0; transform: translateY(10px); transition: none;";
+        await tick();
+
+        requestAnimationFrame(() => {
+            libraryContentStyle =
+                "opacity: 1; transform: translateY(0); transition: opacity 240ms ease, transform 240ms ease;";
+        });
+        await wait(250);
+
+        isLibraryAnimating = false;
+        if (queuedLibraryTarget) {
+            const queued = queuedLibraryTarget;
+            queuedLibraryTarget = null;
+            animateLibraryModeSwitch(queued.mode, queued.albumId);
+        }
+    }
+
+    async function getCoverUrl(coverFilename: string): Promise<string | null> {
+        if (!coverFilename) return null;
+        if (coverUrlCache.has(coverFilename))
+            return coverUrlCache.get(coverFilename)!;
+
+        try {
+            const cacheDir = await appCacheDir();
+            const path = `${cacheDir}/covers/${coverFilename}`;
+            const data = await readFile(path, {
+                dir: BaseDirectory.Cache,
+                encoding: null,
+            });
+            const blob = new Blob([data]);
+            const url = URL.createObjectURL(blob);
+            coverUrlCache.set(coverFilename, url);
+            return url;
+        } catch {
+            return null;
+        }
+    }
+
+    function buildAlbums(songs: SongWithCover[]): AlbumGroup[] {
+        const map = new Map<string, AlbumGroup>();
+
+        for (const song of songs) {
+            const albumTitleRaw = song.album?.trim();
+            const hasNamedAlbum =
+                !!albumTitleRaw && albumTitleRaw !== "Unknown Album";
+            const albumTitle = hasNamedAlbum ? albumTitleRaw : "Unknown Album";
+            const artist = song.subtitle?.trim() || "Unknown Artist";
+            const key = hasNamedAlbum
+                ? `${artist.toLowerCase()}::${albumTitle.toLowerCase()}`
+                : song.cover
+                  ? `cover::${song.cover}`
+                  : `path::${song.path.split(/[\\/]/).slice(0, -1).join("/")}`;
+            const existing = map.get(key);
+
+            if (existing) {
+                existing.tracks.push(song);
+                if (!existing.coverUrl && song.coverUrl) {
+                    existing.coverUrl = song.coverUrl;
+                }
+                continue;
+            }
+
+            map.set(key, {
+                key,
+                title: albumTitle,
+                artist,
+                coverUrl: song.coverUrl,
+                tracks: [song],
+            });
+        }
+
+        return Array.from(map.values()).sort((a, b) =>
+            `${a.artist} ${a.title}`.localeCompare(`${b.artist} ${b.title}`),
+        );
+    }
+
+    async function loadAlbums() {
+        isLibraryLoading = true;
+        try {
+            const songs = await invoke<LibrarySong[]>("search_music", {
+                query: "",
+            });
+            const withCover = await Promise.all(
+                songs.map(async (song) => ({
+                    ...song,
+                    coverUrl: await getCoverUrl(song.cover),
+                })),
+            );
+
+            albums = buildAlbums(withCover);
+            if (
+                libraryMode === "album" &&
+                activeAlbumId &&
+                !albums.some((x) => x.key === activeAlbumId)
+            ) {
+                libraryMode = "home";
+                activeAlbumId = null;
+            }
+        } catch {
+            albums = [];
+        } finally {
+            isLibraryLoading = false;
+        }
+    }
+
+    function openFavoriteTracks() {
+        selected = { type: "playlist", id: "favorites" };
+        activeLibraryView.set("songs");
+    }
+
+    function openAlbum(album: AlbumGroup) {
+        window.history.pushState(
+            { riftView: "library-album", albumId: album.key },
+            "",
+        );
+        animateLibraryModeSwitch("album", album.key);
+    }
+
+    function openLibraryHome() {
+        if (window.history.state?.riftView === "library-album") {
+            window.history.back();
+            return;
+        }
+        animateLibraryModeSwitch("home", null);
+    }
+
+    function handlePopState(event: PopStateEvent) {
+        const state = event.state;
+        if (
+            state?.riftView === "library-album" &&
+            typeof state.albumId === "string"
+        ) {
+            activeLibraryView.set("library");
+            animateLibraryModeSwitch("album", state.albumId);
+            return;
+        }
+
+        if (libraryMode === "album") {
+            activeLibraryView.set("library");
+            animateLibraryModeSwitch("home", null);
+        }
+    }
+
     $: if ($activeLibraryView !== displayedView) {
         animateViewSwitch($activeLibraryView);
     }
 
+    $: if ($libraryHomeRequest !== lastHomeRequest) {
+        lastHomeRequest = $libraryHomeRequest;
+        openLibraryHome();
+    }
+
+    onMount(() => {
+        loadAlbums();
+        window.addEventListener("popstate", handlePopState);
+    });
+
     onDestroy(() => {
         if (transitionTimer) clearTimeout(transitionTimer);
+        window.removeEventListener("popstate", handlePopState);
+        for (const url of coverUrlCache.values()) {
+            URL.revokeObjectURL(url);
+        }
     });
 </script>
 
@@ -119,88 +325,232 @@
     <div class="playlist-view-switch" style={viewStyle}>
         {#if displayedView === "library"}
             <div class="max-w-6xl space-y-10">
-                <section>
-                    <div class="mb-4 flex items-center justify-between">
-                        <h2 class="text-xl font-semibold">Playlists</h2>
-                        <button
-                            type="button"
-                            class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-hover flex items-center justify-center [transition:all_0.15s_ease]"
-                            aria-label="Add playlist"
-                        >
-                            <Plus class="h-4 w-4" />
-                        </button>
-                    </div>
-
-                    <div
-                        class="grid grid-cols-[repeat(auto-fill,minmax(220px,220px))] gap-4"
-                    >
-                        <button
-                            type="button"
-                            class="w-[220px] text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
-                        >
-                            <div
-                                class="mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center"
-                            >
-                                <Heart
-                                    fill="currentColor"
-                                    class="h-17 w-17 text-tertiary"
-                                />
+                <div class="space-y-10" style={libraryContentStyle}>
+                    {#if libraryMode === "home"}
+                        <section>
+                            <div class="mb-4 flex items-center justify-between">
+                                <h2 class="text-xl font-semibold">Playlists</h2>
+                                <button
+                                    type="button"
+                                    class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-hover flex items-center justify-center [transition:all_0.15s_ease]"
+                                    aria-label="Add playlist"
+                                >
+                                    <Plus class="h-4 w-4" />
+                                </button>
                             </div>
-                            <p class="text-sm font-medium text-white">
-                                Favorite tracks
-                            </p>
-                            <p class="text-xs text-secondary">125 tracks</p>
-                        </button>
-                    </div>
-                </section>
 
-                <section>
-                    <h2 class="mb-4 text-xl font-semibold">Albums</h2>
-                    <div
-                        class="grid grid-cols-[repeat(auto-fill,minmax(220px,220px))] gap-4"
-                    >
-                        {#each albums as album}
-                            <button
-                                type="button"
-                                class="w-[220px] text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
+                            <div
+                                class="grid grid-cols-[repeat(auto-fill,minmax(220px,220px))] gap-4"
                             >
+                                <button
+                                    type="button"
+                                    class="w-[220px] text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
+                                    on:click={openFavoriteTracks}
+                                >
+                                    <div
+                                        class="mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center"
+                                    >
+                                        <Heart
+                                            fill="currentColor"
+                                            class="h-17 w-17 text-tertiary"
+                                        />
+                                    </div>
+                                    <p class="text-sm font-medium text-white">
+                                        Favorite songs
+                                    </p>
+                                    <p class="text-xs text-secondary">
+                                        2 songs
+                                    </p>
+                                </button>
+                            </div>
+                        </section>
+
+                        {#if albums.length > 0}
+                            <section>
+                                <h2 class="mb-4 text-xl font-semibold">
+                                    Albums
+                                </h2>
                                 <div
-                                    class="mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center"
+                                    class="grid grid-cols-[repeat(auto-fill,minmax(220px,220px))] gap-4"
                                 >
-                                    <Music class="h-17 w-17 text-tertiary" />
+                                    {#each albums as album}
+                                        <button
+                                            type="button"
+                                            class="w-[220px] text-left rounded-xl border border-divider bg-card p-3 hover:bg-hover [transition:all_0.2s_ease]"
+                                            on:click={() => openAlbum(album)}
+                                        >
+                                            <div
+                                                class="mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden"
+                                            >
+                                                {#if album.coverUrl}
+                                                    <img
+                                                        src={album.coverUrl}
+                                                        alt={album.title}
+                                                        class="w-full h-full object-cover"
+                                                    />
+                                                {:else}
+                                                    <Music
+                                                        class="h-17 w-17 text-tertiary"
+                                                    />
+                                                {/if}
+                                            </div>
+                                            <p
+                                                class="text-sm font-medium text-white truncate"
+                                            >
+                                                {album.title}
+                                            </p>
+                                            <p
+                                                class="text-xs text-secondary truncate"
+                                            >
+                                                {album.artist} • {album.tracks
+                                                    .length} tracks
+                                            </p>
+                                        </button>
+                                    {/each}
                                 </div>
-                                <p
-                                    class="text-sm font-medium text-white truncate"
+                            </section>
+                        {/if}
+                    {:else}
+                        <div>
+                            <div class="flex items-end mb-8">
+                                <div
+                                    class="w-[220px] h-[220px] bg-hover rounded-xl flex items-center justify-center mr-6 overflow-hidden"
                                 >
-                                    {album.title}
-                                </p>
-                                <p class="text-xs text-secondary truncate">
-                                    {album.artist}
-                                </p>
-                            </button>
-                        {/each}
-                    </div>
-                </section>
+                                    {#if selectedCoverUrl}
+                                        <img
+                                            src={selectedCoverUrl}
+                                            alt={selectedTitle}
+                                            class="w-full h-full object-cover"
+                                        />
+                                    {:else}
+                                        <Music
+                                            class="h-17 w-17 text-tertiary"
+                                        />
+                                    {/if}
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-secondary"
+                                    >
+                                        Album
+                                    </p>
+                                    <h1 class="text-7xl font-bold mt-2 mb-4">
+                                        {selectedTitle}
+                                    </h1>
+                                    <p class="text-secondary">
+                                        {selectedSubtitle}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="grid grid-cols-12 gap-4 px-4 py-2 text-secondary text-sm border-b border-border mb-2"
+                            >
+                                <div class="col-span-8 flex items-center">
+                                    <div class="w-16 text-center">#</div>
+                                    <div class="flex-1">Title</div>
+                                </div>
+                                <div class="col-span-2">Album</div>
+                                <div class="col-span-2 text-right">
+                                    Duration
+                                </div>
+                            </div>
+
+                            <div class="space-y-1">
+                                {#each selectedTracks as song, index (song.path)}
+                                    <div
+                                        class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
+                                    >
+                                        <div
+                                            class="col-span-8 flex items-center"
+                                        >
+                                            <div
+                                                class="w-16 flex items-center justify-center"
+                                            >
+                                                <span
+                                                    class="text-secondary group-hover:hidden"
+                                                    >{index + 1}</span
+                                                >
+                                                <Play
+                                                    class="h-4 w-4 hidden group-hover:block text-white"
+                                                />
+                                            </div>
+                                            <div
+                                                class="flex items-center flex-1"
+                                            >
+                                                <div
+                                                    class="w-11 h-11 bg-surface rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"
+                                                >
+                                                    {#if song.coverUrl}
+                                                        <img
+                                                            src={song.coverUrl}
+                                                            alt={song.title}
+                                                            class="w-full h-full object-cover"
+                                                        />
+                                                    {:else}
+                                                        <Music
+                                                            class="h-5 w-5 text-tertiary"
+                                                        />
+                                                    {/if}
+                                                </div>
+                                                <div>
+                                                    <div class="text-white">
+                                                        {song.title}
+                                                    </div>
+                                                    <div
+                                                        class="text-sm text-secondary"
+                                                    >
+                                                        {song.subtitle}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            class="col-span-2 flex items-center text-secondary"
+                                        >
+                                            {song.album}
+                                        </div>
+                                        <div
+                                            class="col-span-2 flex items-center justify-end text-secondary"
+                                        >
+                                            {song.duration}
+                                        </div>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    {/if}
+                </div>
             </div>
         {:else}
             <div>
                 <div class="flex items-end mb-8">
                     <div
-                        class="w-[220px] h-[220px] bg-hover rounded-xl flex items-center justify-center mr-6"
+                        class="w-[220px] h-[220px] bg-hover rounded-xl flex items-center justify-center mr-6 overflow-hidden"
                     >
-                        <Heart
-                            fill="currentColor"
-                            class="h-17 w-17 text-tertiary"
-                        />
+                        {#if selectedCoverUrl}
+                            <img
+                                src={selectedCoverUrl}
+                                alt={selectedTitle}
+                                class="w-full h-full object-cover"
+                            />
+                        {:else if selected.type === "album"}
+                            <Music class="h-17 w-17 text-tertiary" />
+                        {:else}
+                            <Heart
+                                fill="currentColor"
+                                class="h-17 w-17 text-tertiary"
+                            />
+                        {/if}
                     </div>
                     <div>
                         <p class="text-sm font-medium text-secondary">
-                            Playlist
+                            {selected.type === "album" ? "Album" : "Playlist"}
                         </p>
                         <h1 class="text-7xl font-bold mt-2 mb-4">
-                            {title}
+                            {selectedTitle}
                         </h1>
-                        <p class="text-secondary">{description}</p>
+                        <p class="text-secondary">{selectedSubtitle}</p>
                     </div>
                 </div>
 
@@ -215,7 +565,7 @@
                     <div class="col-span-2 text-right">Duration</div>
                 </div>
 
-                {#if loading}
+                {#if isLibraryLoading}
                     <div class="space-y-1">
                         {#each Array(8) as _}
                             <div
@@ -258,9 +608,13 @@
                             </div>
                         {/each}
                     </div>
+                {:else if selectedTracks.length === 0}
+                    <div class="px-4 py-8 text-secondary text-sm">
+                        No tracks found for this selection.
+                    </div>
                 {:else}
                     <div class="space-y-1">
-                        {#each songs as song (song.rank)}
+                        {#each selectedTracks as song, index (song.path)}
                             <div
                                 class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
                             >
@@ -270,7 +624,7 @@
                                     >
                                         <span
                                             class="text-secondary group-hover:hidden"
-                                            >{song.rank}</span
+                                            >{index + 1}</span
                                         >
                                         <Play
                                             class="h-4 w-4 hidden group-hover:block text-white"
@@ -278,18 +632,26 @@
                                     </div>
                                     <div class="flex items-center flex-1">
                                         <div
-                                            class="w-11 h-11 bg-surface rounded mr-3 shrink-0 flex items-center justify-center"
+                                            class="w-11 h-11 bg-surface rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"
                                         >
-                                            <Music
-                                                class="h-5 w-5 text-tertiary"
-                                            />
+                                            {#if song.coverUrl}
+                                                <img
+                                                    src={song.coverUrl}
+                                                    alt={song.title}
+                                                    class="w-full h-full object-cover"
+                                                />
+                                            {:else}
+                                                <Music
+                                                    class="h-5 w-5 text-tertiary"
+                                                />
+                                            {/if}
                                         </div>
                                         <div>
                                             <div class="text-white">
                                                 {song.title}
                                             </div>
                                             <div class="text-sm text-secondary">
-                                                {song.artist}
+                                                {song.subtitle}
                                             </div>
                                         </div>
                                     </div>

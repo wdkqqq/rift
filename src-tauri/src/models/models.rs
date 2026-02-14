@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub struct Song {
     pub title: String,
     pub subtitle: String,
+    pub album: String,
     pub duration: String,
     pub cover: String,
     pub path: String,

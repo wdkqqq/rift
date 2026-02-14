@@ -2,6 +2,7 @@
     import {
         activeLibraryView,
         commandPaletteOpen,
+        libraryHomeRequest,
         settingsPanelOpen,
     } from "../stores/app";
     import { Search, Menu, Music, Settings } from "lucide-svelte";
@@ -15,6 +16,10 @@
     }
 
     function openLibraryView() {
+        if ($activeLibraryView === "library") {
+            libraryHomeRequest.update((value) => value + 1);
+            return;
+        }
         activeLibraryView.set("library");
     }
 

@@ -42,7 +42,9 @@ fn main() {
             playback_pause,
             playback_seek,
             playback_set_volume,
-            playback_get_state
+            playback_get_state,
+            get_app_config,
+            set_app_config
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

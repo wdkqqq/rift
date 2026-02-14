@@ -1,3 +1,4 @@
+use crate::config::config::{load_config, save_config, Config};
 use crate::discord::rpc::DiscordRpcService;
 use crate::music::library::MusicLibrary;
 use crate::music::playback::{PlaybackService, PlaybackState};
@@ -89,4 +90,16 @@ pub fn playback_set_volume(
 #[tauri::command]
 pub fn playback_get_state(state: State<PlaybackService>) -> Result<PlaybackState, String> {
     state.get_state()
+}
+
+#[tauri::command]
+pub fn get_app_config() -> Config {
+    load_config()
+}
+
+#[tauri::command]
+pub fn set_app_config(config: Config, rpc: State<DiscordRpcService>) -> Config {
+    save_config(&config);
+    rpc.set_enabled(config.discord_rpc);
+    config
 }

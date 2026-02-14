@@ -38,41 +38,29 @@ struct RpcState {
     is_playing: bool,
     current_time: f64,
     duration: f64,
+    rpc_enabled: bool,
 }
 
 pub struct DiscordRpcService {
-    enabled: bool,
     state: Arc<Mutex<RpcState>>,
 }
 
 impl DiscordRpcService {
     pub fn start() -> Self {
         let config = load_config();
-        let state = Arc::new(Mutex::new(RpcState::default()));
-
-        if !config.discord_rpc {
-            return Self {
-                enabled: false,
-                state,
-            };
-        }
+        let mut initial_state = RpcState::default();
+        initial_state.rpc_enabled = config.discord_rpc;
+        let state = Arc::new(Mutex::new(initial_state));
 
         let state_for_thread = Arc::clone(&state);
         thread::spawn(move || {
             run_rpc_loop(state_for_thread);
         });
 
-        Self {
-            enabled: true,
-            state,
-        }
+        Self { state }
     }
 
     pub fn set_track(&self, song: Option<Song>) {
-        if !self.enabled {
-            return;
-        }
-
         if let Ok(mut state) = self.state.lock() {
             state.track = song.map(|song| RpcTrack {
                 title: song.title,
@@ -83,31 +71,28 @@ impl DiscordRpcService {
     }
 
     pub fn sync_playback(&self, is_playing: bool, current_time: f64, duration: f64) {
-        if !self.enabled {
-            return;
-        }
-
         if let Ok(mut state) = self.state.lock() {
             state.is_playing = is_playing;
             state.current_time = current_time.max(0.0);
             state.duration = duration.max(0.0);
         }
     }
+
+    pub fn set_enabled(&self, enabled: bool) {
+        if let Ok(mut state) = self.state.lock() {
+            state.rpc_enabled = enabled;
+        }
+    }
 }
 
 fn run_rpc_loop(state: Arc<Mutex<RpcState>>) {
-    let mut client = DiscordIpcClient::new(DISCORD_CLIENT_ID);
-    if let Err(error) = client.connect() {
-        eprintln!("Cannot connect to Discord: {}", error);
-        return;
-    }
-
     let http_client = Client::builder()
         .timeout(Duration::from_secs(4))
         .build()
         .ok();
     let mut cover_cache: HashMap<String, Option<String>> = HashMap::new();
     let mut last_payload = String::new();
+    let mut client: Option<DiscordIpcClient> = None;
 
     loop {
         thread::sleep(Duration::from_secs(2));
@@ -117,7 +102,32 @@ fn run_rpc_loop(state: Arc<Mutex<RpcState>>) {
             Err(_) => continue,
         };
 
+        if !snapshot.rpc_enabled {
+            if let Some(active_client) = client.as_mut() {
+                let _ = active_client.clear_activity();
+                let _ = active_client.close();
+            }
+            client = None;
+            last_payload.clear();
+            continue;
+        }
+
+        if client.is_none() {
+            let mut new_client = DiscordIpcClient::new(DISCORD_CLIENT_ID);
+            if let Err(error) = new_client.connect() {
+                eprintln!("Cannot connect to Discord: {}", error);
+                continue;
+            }
+            client = Some(new_client);
+        }
+
+        let Some(active_client) = client.as_mut() else {
+            continue;
+        };
+
         let Some(track) = snapshot.track else {
+            let _ = active_client.clear_activity();
+            last_payload.clear();
             continue;
         };
 
@@ -161,8 +171,10 @@ fn run_rpc_loop(state: Arc<Mutex<RpcState>>) {
             activity = activity.timestamps(activity::Timestamps::new().start(start).end(end));
         }
 
-        if let Err(error) = client.set_activity(activity) {
+        if let Err(error) = active_client.set_activity(activity) {
             eprintln!("Cannot set activity: {}", error);
+            let _ = active_client.close();
+            client = None;
             continue;
         }
 

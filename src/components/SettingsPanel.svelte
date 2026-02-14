@@ -1,12 +1,70 @@
-<script>
+<script lang="ts">
+    import { invoke } from "@tauri-apps/api/core";
     import { settingsPanelOpen, activeSettingsTab } from "../stores/app.ts";
     import { onMount } from "svelte";
+    type AppConfig = {
+        volume_normalization: boolean;
+        discord_rpc: boolean;
+        online_requests: boolean;
+        automatic_updates: boolean;
+        plausible_analytics: boolean;
+        dark_theme: boolean;
+        native_decorations: boolean;
+    };
+
+    let volumeNormalizationEnabled = false;
+    let discordRpcEnabled = true;
     let onlineRequestsEnabled = true;
     let autoUpdateEnabled = true;
     let plausibleAnalyticsEnabled = true;
+    let darkThemeEnabled = true;
+    let nativeDecorationsEnabled = false;
 
     let currentTab = $activeSettingsTab;
     let isAnimating = false;
+    let isConfigReady = false;
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function buildConfig(): AppConfig {
+        return {
+            volume_normalization: volumeNormalizationEnabled,
+            discord_rpc: discordRpcEnabled,
+            online_requests: onlineRequestsEnabled,
+            automatic_updates: autoUpdateEnabled,
+            plausible_analytics: plausibleAnalyticsEnabled,
+            dark_theme: darkThemeEnabled,
+            native_decorations: nativeDecorationsEnabled,
+        };
+    }
+
+    function applyConfig(config: AppConfig) {
+        volumeNormalizationEnabled = config.volume_normalization;
+        discordRpcEnabled = config.discord_rpc;
+        onlineRequestsEnabled = config.online_requests;
+        autoUpdateEnabled = config.automatic_updates;
+        plausibleAnalyticsEnabled = config.plausible_analytics;
+        darkThemeEnabled = config.dark_theme;
+        nativeDecorationsEnabled = config.native_decorations;
+    }
+
+    async function persistConfig() {
+        try {
+            const saved = await invoke<AppConfig>("set_app_config", {
+                config: buildConfig(),
+            });
+            applyConfig(saved);
+        } catch (error) {
+            console.error("Failed to save config:", error);
+        }
+    }
+
+    function queuePersist() {
+        if (!isConfigReady) return;
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            void persistConfig();
+        }, 120);
+    }
 
     function switchTab(tab) {
         if (isAnimating || tab === currentTab) return;
@@ -56,6 +114,17 @@
     }
 
     onMount(() => {
+        void (async () => {
+            try {
+                const config = await invoke<AppConfig>("get_app_config");
+                applyConfig(config);
+            } catch (error) {
+                console.error("Failed to load config:", error);
+            } finally {
+                isConfigReady = true;
+            }
+        })();
+
         const initialContent = document.getElementById(
             `${$activeSettingsTab}-content`,
         );
@@ -64,6 +133,10 @@
             initialContent.style.transform = "translateY(0)";
             initialContent.style.opacity = "1";
         }
+
+        return () => {
+            if (saveTimer) clearTimeout(saveTimer);
+        };
     });
 </script>
 
@@ -135,7 +208,12 @@
                                 </p>
                             </div>
                             <label class="checkbox-container">
-                                <input type="checkbox" class="checkbox-input" />
+                                <input
+                                    type="checkbox"
+                                    class="checkbox-input"
+                                    bind:checked={volumeNormalizationEnabled}
+                                    on:change={queuePersist}
+                                />
                                 <span class="checkbox-slider"></span>
                             </label>
                         </div>
@@ -171,7 +249,8 @@
                                 <input
                                     type="checkbox"
                                     class="checkbox-input"
-                                    checked
+                                    bind:checked={discordRpcEnabled}
+                                    on:change={queuePersist}
                                 />
                                 <span class="checkbox-slider"></span>
                             </label>
@@ -199,6 +278,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={onlineRequestsEnabled}
+                                        on:change={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -220,6 +300,7 @@
                                         class="checkbox-input"
                                         bind:checked={autoUpdateEnabled}
                                         disabled={!onlineRequestsEnabled}
+                                        on:change={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -241,6 +322,7 @@
                                         class="checkbox-input"
                                         bind:checked={plausibleAnalyticsEnabled}
                                         disabled={!onlineRequestsEnabled}
+                                        on:change={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -278,7 +360,8 @@
                                 <input
                                     type="checkbox"
                                     class="checkbox-input"
-                                    checked
+                                    bind:checked={darkThemeEnabled}
+                                    on:change={queuePersist}
                                 />
                                 <span class="checkbox-slider"></span>
                             </label>
@@ -296,7 +379,12 @@
                                 </p>
                             </div>
                             <label class="checkbox-container">
-                                <input type="checkbox" class="checkbox-input" />
+                                <input
+                                    type="checkbox"
+                                    class="checkbox-input"
+                                    bind:checked={nativeDecorationsEnabled}
+                                    on:change={queuePersist}
+                                />
                                 <span class="checkbox-slider"></span>
                             </label>
                         </div>

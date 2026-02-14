@@ -3,13 +3,28 @@ use std::fs;
 use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(default)]
 pub struct Config {
+    pub volume_normalization: bool,
     pub discord_rpc: bool,
+    pub online_requests: bool,
+    pub automatic_updates: bool,
+    pub plausible_analytics: bool,
+    pub dark_theme: bool,
+    pub native_decorations: bool,
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Self { discord_rpc: true }
+        Self {
+            volume_normalization: false,
+            discord_rpc: true,
+            online_requests: true,
+            automatic_updates: true,
+            plausible_analytics: true,
+            dark_theme: true,
+            native_decorations: false,
+        }
     }
 }
 

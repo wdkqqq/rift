@@ -368,7 +368,11 @@
                 !!albumTitleRaw && albumTitleRaw !== "Unknown Album";
             const albumTitle = hasNamedAlbum ? albumTitleRaw : "Unknown Album";
             const artist = song.subtitle?.trim() || "Unknown Artist";
-            const folderPath = song.path.split(/[\\/]/).slice(0, -1).join("/").toLowerCase();
+            const folderPath = song.path
+                .split(/[\\/]/)
+                .slice(0, -1)
+                .join("/")
+                .toLowerCase();
             const key = hasNamedAlbum
                 ? `album::${albumTitle.toLowerCase()}::${folderPath}`
                 : song.cover
@@ -380,11 +384,6 @@
                 existing.tracks.push(song);
                 if (!existing.coverUrl && song.coverUrl) {
                     existing.coverUrl = song.coverUrl;
-                }
-                // Check if artists differ, mark as "Various Artists"
-                const trackArtist = song.subtitle?.trim() || "Unknown Artist";
-                if (existing.artist !== trackArtist && existing.artist !== "Various Artists") {
-                    existing.artist = "Various Artists";
                 }
                 continue;
             }
@@ -399,6 +398,32 @@
         }
 
         for (const album of map.values()) {
+            const artistCounts = new Map<string, number>();
+            for (const track of album.tracks) {
+                const trackArtist = track.subtitle?.trim() || "Unknown Artist";
+                artistCounts.set(
+                    trackArtist,
+                    (artistCounts.get(trackArtist) || 0) + 1,
+                );
+            }
+
+            let mostFrequentArtist = album.artist;
+            let maxCount = 0;
+
+            for (const [artist, count] of artistCounts) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    mostFrequentArtist = artist;
+                }
+            }
+
+            if (artistCounts.size > 1) {
+                album.artist = mostFrequentArtist;
+            } else {
+                album.artist =
+                    album.tracks[0]?.subtitle?.trim() || "Unknown Artist";
+            }
+
             album.tracks.sort(compareTracksForAlbum);
         }
 

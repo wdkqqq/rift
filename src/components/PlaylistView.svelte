@@ -836,11 +836,11 @@
 <div
     bind:this={contentElement}
     on:scroll={handleContentScroll}
-    class="flex-1 min-w-0 w-full overflow-auto m-4 ml-0 p-6"
+    class="flex-1 min-w-0 w-full overflow-auto px-6 py-6"
 >
     <div class="playlist-view-switch" style={viewStyle}>
         {#if displayedView === "library"}
-            <div class="w-full max-w-6xl space-y-10">
+            <div class="w-full space-y-10">
                 <div class="space-y-10" style={libraryContentStyle}>
                     {#if libraryMode === "home"}
                         {#each homeAlbumSections as section (section.id)}
@@ -886,7 +886,7 @@
                                         bind:this={
                                             sectionRowElements[section.id]
                                         }
-                                        class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
+                                        class="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6"
                                     >
                                         {#each section.albums as album}
                                             <div
@@ -999,7 +999,7 @@
                                 </div>
                                 <div
                                     bind:this={artistRowElement}
-                                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
+                                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6"
                                 >
                                     {#each artists as artist}
                                         <div

@@ -368,17 +368,23 @@
                 !!albumTitleRaw && albumTitleRaw !== "Unknown Album";
             const albumTitle = hasNamedAlbum ? albumTitleRaw : "Unknown Album";
             const artist = song.subtitle?.trim() || "Unknown Artist";
+            const folderPath = song.path.split(/[\\/]/).slice(0, -1).join("/").toLowerCase();
             const key = hasNamedAlbum
-                ? `${artist.toLowerCase()}::${albumTitle.toLowerCase()}`
+                ? `album::${albumTitle.toLowerCase()}::${folderPath}`
                 : song.cover
                   ? `cover::${song.cover}`
-                  : `path::${song.path.split(/[\\/]/).slice(0, -1).join("/")}`;
+                  : `path::${folderPath}`;
             const existing = map.get(key);
 
             if (existing) {
                 existing.tracks.push(song);
                 if (!existing.coverUrl && song.coverUrl) {
                     existing.coverUrl = song.coverUrl;
+                }
+                // Check if artists differ, mark as "Various Artists"
+                const trackArtist = song.subtitle?.trim() || "Unknown Artist";
+                if (existing.artist !== trackArtist && existing.artist !== "Various Artists") {
+                    existing.artist = "Various Artists";
                 }
                 continue;
             }

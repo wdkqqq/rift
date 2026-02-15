@@ -6,6 +6,10 @@ use std::path::PathBuf;
 #[serde(default)]
 pub struct Config {
     pub volume_normalization: bool,
+    pub autoplay: bool,
+    pub crossfade: bool,
+    pub gapless_playback: bool,
+    pub normalize_by_album: bool,
     pub discord_rpc: bool,
     pub online_requests: bool,
     pub automatic_updates: bool,
@@ -18,6 +22,10 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             volume_normalization: false,
+            autoplay: true,
+            crossfade: false,
+            gapless_playback: true,
+            normalize_by_album: false,
             discord_rpc: true,
             online_requests: true,
             automatic_updates: true,

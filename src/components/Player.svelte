@@ -48,6 +48,7 @@
     let playlistSearch = "";
     let playlistPopoverElement: HTMLDivElement | null = null;
     let playlistMemberships = new Set<string>();
+    let membershipsLoadedForPath: string | null = null;
 
     type Playlist = {
         slug: string;
@@ -318,9 +319,11 @@
                     trackPath,
                 },
             );
+            if (currentTrack?.path !== trackPath) return;
             playlistMemberships = new Set(slugs);
         } catch (error) {
             console.error("Failed to load playlist memberships:", error);
+            if (currentTrack?.path !== trackPath) return;
             playlistMemberships = new Set();
         }
     }
@@ -358,8 +361,17 @@
         };
     });
 
-    $: if (playlistPopoverOpen && currentTrack?.path) {
+    $: if (
+        currentTrack?.path &&
+        currentTrack.path !== membershipsLoadedForPath
+    ) {
+        membershipsLoadedForPath = currentTrack.path;
         void loadTrackMemberships(currentTrack.path);
+    }
+
+    $: if (!currentTrack?.path) {
+        membershipsLoadedForPath = null;
+        playlistMemberships = new Set();
     }
 
     onDestroy(() => {
@@ -416,7 +428,18 @@
                             aria-expanded={playlistPopoverOpen}
                             on:click={togglePlaylistPopover}
                         >
-                            <PlusCircle class="h-4 w-4" />
+                            {#if playlistMemberships.size > 0}
+                                <span
+                                    class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/20"
+                                >
+                                    <Check
+                                        class="h-2.5 w-2.5 text-white"
+                                        strokeWidth={3}
+                                    />
+                                </span>
+                            {:else}
+                                <PlusCircle class="h-4 w-4" />
+                            {/if}
                         </button>
 
                         {#if playlistPopoverOpen}

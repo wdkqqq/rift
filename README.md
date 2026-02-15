@@ -17,6 +17,10 @@
     <br/>
     <img src="/resources/screenshot-2.png"
         title="Interface Screenshot 2" alt="Screenshot 2" width="700" />
+    <br/>
+    <br/>
+    <img src="/resources/screenshot-3.png"
+        title="Interface Screenshot 3" alt="Screenshot 3" width="700" />
 </div>
 
 > [!WARNING]

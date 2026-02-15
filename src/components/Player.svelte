@@ -432,15 +432,14 @@
                         >
                             {#if playlistMemberships.size > 0}
                                 <span
-                                    class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/20"
+                                    class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-hover)] text-[var(--color-text-secondary)]"
                                 >
-                                    <Check
-                                        class="h-2.5 w-2.5 text-white"
-                                        strokeWidth={3}
-                                    />
+                                    <Check class="h-3 w-3" strokeWidth={3} />
                                 </span>
                             {:else}
-                                <PlusCircle class="h-4 w-4" />
+                                <PlusCircle
+                                    class="h-5 w-5 text-[var(--color-text-secondary)]"
+                                />
                             {/if}
                         </button>
 

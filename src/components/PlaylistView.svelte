@@ -26,6 +26,7 @@
         title: string;
         subtitle: string;
         album: string;
+        track_number?: number | null;
         added_at: number;
         duration: string;
         cover: string;
@@ -220,6 +221,28 @@
         return `${normalized.slice(0, ALBUM_TITLE_MAX_CHARS - 1)}...`;
     }
 
+    function compareTracksForAlbum(a: SongWithCover, b: SongWithCover): number {
+        const aTrackNumber =
+            typeof a.track_number === "number" ? a.track_number : null;
+        const bTrackNumber =
+            typeof b.track_number === "number" ? b.track_number : null;
+
+        if (aTrackNumber !== null && bTrackNumber !== null) {
+            if (aTrackNumber !== bTrackNumber)
+                return aTrackNumber - bTrackNumber;
+            return a.title.localeCompare(b.title, undefined, {
+                sensitivity: "base",
+            });
+        }
+
+        if (aTrackNumber !== null) return -1;
+        if (bTrackNumber !== null) return 1;
+
+        return a.title.localeCompare(b.title, undefined, {
+            sensitivity: "base",
+        });
+    }
+
     async function animateViewSwitch(nextView: "songs" | "library" | "detail") {
         if (isAnimating) {
             queuedView = nextView;
@@ -367,6 +390,10 @@
                 coverUrl: song.coverUrl,
                 tracks: [song],
             });
+        }
+
+        for (const album of map.values()) {
+            album.tracks.sort(compareTracksForAlbum);
         }
 
         return Array.from(map.values()).sort((a, b) =>

@@ -5,6 +5,7 @@ pub struct Song {
     pub title: String,
     pub subtitle: String,
     pub album: String,
+    pub track_number: Option<u32>,
     pub added_at: i64,
     pub duration: String,
     pub cover: String,

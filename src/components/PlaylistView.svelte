@@ -6,7 +6,6 @@
         Music,
         Pause,
         Play,
-        Plus,
         UserRound,
     } from "lucide-svelte";
     import { onDestroy, onMount, tick } from "svelte";
@@ -51,6 +50,8 @@
         imageFilename: string | null;
         imageUrl: string | null;
     };
+
+    type SongsLibraryTab = "tracks" | "albums" | "playlists";
 
     type HomeSectionId = "continue" | "recently-added" | "most-played-week";
 
@@ -116,20 +117,19 @@
     let lastActiveLibraryView: "songs" | "library" | "detail" = "songs";
     let isSongsView = false;
     let visibleSongsCount = SONGS_PAGE_SIZE;
-    let songsLibraryTab: "tracks" | "albums" = "albums";
-    let displayedSongsLibraryTab: "tracks" | "albums" = "albums";
+    let songsLibraryTab: SongsLibraryTab = "playlists";
+    let displayedSongsLibraryTab: SongsLibraryTab = "playlists";
     let songsTabSlideDirection: 1 | -1 = 1;
     let songsTabContentStyle =
         "opacity: 1; transform: translateX(0); transition: opacity 220ms ease, transform 220ms ease;";
     let songsTabTransitionTimer: ReturnType<typeof setTimeout> | null = null;
     let isSongsTabAnimating = false;
-    let queuedSongsTab: "tracks" | "albums" | null = null;
+    let queuedSongsTab: SongsLibraryTab | null = null;
 
     $: selectedAlbum =
         libraryMode === "album" && activeAlbumId
             ? (albums.find((album) => album.key === activeAlbumId) ?? null)
             : null;
-    $: latestFavoriteTracks = favoritesTracks.slice(-2);
     $: isSongsView = displayedView === "songs";
     $: selectedTracks = isSongsView
         ? allSongs.slice(0, visibleSongsCount)
@@ -141,7 +141,7 @@
         ? "Library"
         : libraryMode === "album"
           ? formatAlbumTitle(selectedAlbum?.title ?? "Album")
-          : "Favorite songs";
+          : "Favorite Tracks";
     $: selectedSubtitle = isSongsView
         ? `${allSongs.length} songs`
         : libraryMode === "album"
@@ -632,6 +632,33 @@
         });
     }
 
+    async function toggleFavoritesPlayback(event: MouseEvent) {
+        event.stopPropagation();
+        if (favoritesTracks.length === 0) return;
+
+        const isCurrentFavorites = activeAlbumPlaybackKey === FAVORITES_SLUG;
+        if (isCurrentFavorites) {
+            if (activeAlbumPlaybackPaused) {
+                activeAlbumPlaybackPaused = false;
+                await tick();
+                await invoke("playback_play");
+                return;
+            }
+
+            activeAlbumPlaybackPaused = true;
+            await tick();
+            await invoke("playback_pause");
+            return;
+        }
+
+        pausedTrackPath = null;
+        playTrack(0, favoritesTracks, FAVORITES_SLUG);
+        await tick();
+        await invoke("playback_load_and_play", {
+            path: favoritesTracks[0].path,
+        });
+    }
+
     function playTrack(
         trackIndex: number,
         sourceTracks: SongWithCover[],
@@ -652,16 +679,22 @@
         activeAlbumPlaybackPaused = false;
     }
 
-    function setSongsLibraryTab(nextTab: "tracks" | "albums") {
+    function getSongsTabIndex(tab: SongsLibraryTab): number {
+        if (tab === "albums") return 0;
+        if (tab === "tracks") return 1;
+        return 2;
+    }
+
+    function setSongsLibraryTab(nextTab: SongsLibraryTab) {
         if (songsLibraryTab === nextTab && displayedSongsLibraryTab === nextTab)
             return;
-        const currentIndex = songsLibraryTab === "albums" ? 0 : 1;
-        const nextIndex = nextTab === "albums" ? 0 : 1;
+        const currentIndex = getSongsTabIndex(songsLibraryTab);
+        const nextIndex = getSongsTabIndex(nextTab);
         songsTabSlideDirection = nextIndex > currentIndex ? 1 : -1;
         void animateSongsTabSwitch(nextTab);
     }
 
-    async function animateSongsTabSwitch(nextTab: "tracks" | "albums") {
+    async function animateSongsTabSwitch(nextTab: SongsLibraryTab) {
         if (!isSongsView) {
             songsLibraryTab = nextTab;
             displayedSongsLibraryTab = nextTab;
@@ -752,8 +785,8 @@
         lastActiveLibraryView = $activeLibraryView;
         if ($activeLibraryView === "songs") {
             visibleSongsCount = SONGS_PAGE_SIZE;
-            songsLibraryTab = "albums";
-            displayedSongsLibraryTab = "albums";
+            songsLibraryTab = "playlists";
+            displayedSongsLibraryTab = "playlists";
             songsTabSlideDirection = 1;
             isSongsTabAnimating = false;
             queuedSongsTab = null;
@@ -810,60 +843,6 @@
             <div class="w-full max-w-6xl space-y-10">
                 <div class="space-y-10" style={libraryContentStyle}>
                     {#if libraryMode === "home"}
-                        <section>
-                            <div class="flex">
-                                <button
-                                    type="button"
-                                    class="w-full max-w-[560px] text-left rounded-xl border border-divider bg-card px-4 py-3 hover:bg-hover [transition:all_0.2s_ease]"
-                                    on:click={openFavoriteTracks}
-                                >
-                                    <div class="flex items-center gap-4">
-                                        <div
-                                            class="w-16 h-16 rounded-xl bg-hover flex items-center justify-center shrink-0"
-                                        >
-                                            <Heart
-                                                fill="currentColor"
-                                                class="h-8 w-8 text-tertiary"
-                                            />
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <p
-                                                class="text-base font-medium text-white"
-                                            >
-                                                Favorite songs
-                                            </p>
-                                            <p class="text-sm text-secondary">
-                                                {favoritesTracks.length} songs
-                                            </p>
-                                        </div>
-                                        {#if latestFavoriteTracks.length >= 2}
-                                            <div
-                                                class="shrink-0 flex items-center -space-x-2"
-                                            >
-                                                {#each latestFavoriteTracks as track (track.path)}
-                                                    <div
-                                                        class="w-10 h-10 rounded-lg border border-divider bg-surface overflow-hidden flex items-center justify-center"
-                                                    >
-                                                        {#if track.coverUrl}
-                                                            <img
-                                                                src={track.coverUrl}
-                                                                alt={track.title}
-                                                                class="w-full h-full object-cover"
-                                                            />
-                                                        {:else}
-                                                            <Music
-                                                                class="h-4 w-4 text-tertiary"
-                                                            />
-                                                        {/if}
-                                                    </div>
-                                                {/each}
-                                            </div>
-                                        {/if}
-                                    </div>
-                                </button>
-                            </div>
-                        </section>
-
                         {#each homeAlbumSections as section (section.id)}
                             <section>
                                 <div
@@ -1056,29 +1035,6 @@
                                 </div>
                             </section>
                         {/if}
-
-                        <section>
-                            <div class="mb-4 flex items-center justify-between">
-                                <h2 class="text-xl font-semibold">Playlists</h2>
-                            </div>
-                            <div
-                                class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
-                            >
-                                <button
-                                    type="button"
-                                    class="w-[180px] shrink-0 text-left group"
-                                >
-                                    <div
-                                        class="mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center group-hover:bg-white/10 [transition:background-color_0.2s_ease]"
-                                    >
-                                        <Plus class="h-17 w-17 text-tertiary" />
-                                    </div>
-                                    <p class="text-sm font-medium text-white">
-                                        New playlist
-                                    </p>
-                                </button>
-                            </div>
-                        </section>
                     {:else}
                         <div>
                             <div class="flex items-end mb-8">
@@ -1288,6 +1244,18 @@
                             <button
                                 type="button"
                                 class="px-3 py-1.5 rounded-full text-sm [transition:all_0.2s_ease]"
+                                class:bg-card={songsLibraryTab === "playlists"}
+                                class:text-white={songsLibraryTab ===
+                                    "playlists"}
+                                class:text-secondary={songsLibraryTab !==
+                                    "playlists"}
+                                on:click={() => setSongsLibraryTab("playlists")}
+                            >
+                                Playlists
+                            </button>
+                            <button
+                                type="button"
+                                class="px-3 py-1.5 rounded-full text-sm [transition:all_0.2s_ease]"
                                 class:bg-card={songsLibraryTab === "albums"}
                                 class:text-white={songsLibraryTab === "albums"}
                                 class:text-secondary={songsLibraryTab !==
@@ -1331,9 +1299,7 @@
                         </div>
                         <div>
                             <p class="text-sm font-medium text-secondary">
-                                {libraryMode === "album"
-                                    ? "Album"
-                                    : "Favorites"}
+                                {libraryMode === "album" ? "Album" : "Playlist"}
                             </p>
                             <h1
                                 class="text-7xl font-bold mt-2 mb-4 truncate whitespace-nowrap max-w-full"
@@ -1559,102 +1525,168 @@
                                 {/each}
                             </div>
                         {/if}
-                    {:else if isLibraryLoading}
-                        <div
-                            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-                        >
-                            {#each Array(12) as _}
-                                <div>
+                    {:else if displayedSongsLibraryTab === "albums"}
+                        {#if isLibraryLoading}
+                            <div
+                                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+                            >
+                                {#each Array(12) as _}
+                                    <div>
+                                        <div
+                                            class="w-full aspect-square rounded-xl bg-hover animate-pulse"
+                                        ></div>
+                                        <div
+                                            class="h-4 bg-hover rounded mt-2 w-3/4 animate-pulse"
+                                        ></div>
+                                        <div
+                                            class="h-3 bg-hover rounded mt-2 w-2/3 animate-pulse"
+                                        ></div>
+                                    </div>
+                                {/each}
+                            </div>
+                        {:else if albums.length === 0}
+                            <div class="px-4 py-8 text-secondary text-sm">
+                                No albums found.
+                            </div>
+                        {:else}
+                            <div
+                                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+                            >
+                                {#each albums as album}
                                     <div
-                                        class="w-full aspect-square rounded-xl bg-hover animate-pulse"
-                                    ></div>
-                                    <div
-                                        class="h-4 bg-hover rounded mt-2 w-3/4 animate-pulse"
-                                    ></div>
-                                    <div
-                                        class="h-3 bg-hover rounded mt-2 w-2/3 animate-pulse"
-                                    ></div>
-                                </div>
-                            {/each}
-                        </div>
-                    {:else if albums.length === 0}
-                        <div class="px-4 py-8 text-secondary text-sm">
-                            No albums found.
-                        </div>
+                                        class="text-left group"
+                                        on:click={() => openAlbum(album)}
+                                    >
+                                        <div
+                                            class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                        >
+                                            {#if album.coverUrl}
+                                                <img
+                                                    src={album.coverUrl}
+                                                    alt={album.title}
+                                                    class="w-full h-full object-cover"
+                                                />
+                                            {:else}
+                                                <Music
+                                                    class="h-17 w-17 text-tertiary"
+                                                />
+                                            {/if}
+                                            <div
+                                                class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                            ></div>
+                                            <div
+                                                class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                    aria-label={activeAlbumPlaybackKey ===
+                                                        album.key &&
+                                                    !activeAlbumPlaybackPaused
+                                                        ? "Pause album"
+                                                        : "Play album"}
+                                                    on:click={(event) =>
+                                                        toggleAlbumPlayback(
+                                                            event,
+                                                            album,
+                                                        )}
+                                                >
+                                                    {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
+                                                        <span
+                                                            class="flex items-center gap-[3px]"
+                                                        >
+                                                            <span
+                                                                class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                            ></span>
+                                                            <span
+                                                                class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                            ></span>
+                                                        </span>
+                                                    {:else}
+                                                        <span
+                                                            class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
+                                                        ></span>
+                                                    {/if}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <p
+                                            class="text-sm font-medium text-white truncate"
+                                            title={album.title}
+                                        >
+                                            {formatAlbumTitle(album.title)}
+                                        </p>
+                                        <p
+                                            class="text-xs text-secondary truncate"
+                                        >
+                                            {album.artist} • {album.tracks
+                                                .length}
+                                            tracks
+                                        </p>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     {:else}
                         <div
                             class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
                         >
-                            {#each albums as album}
+                            <button
+                                type="button"
+                                class="text-left group"
+                                on:click={openFavoriteTracks}
+                            >
                                 <div
-                                    class="text-left group"
-                                    on:click={() => openAlbum(album)}
+                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                 >
+                                    <Heart
+                                        fill="currentColor"
+                                        class="h-17 w-17 text-tertiary"
+                                    />
                                     <div
-                                        class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                    ></div>
+                                    <div
+                                        class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                     >
-                                        {#if album.coverUrl}
-                                            <img
-                                                src={album.coverUrl}
-                                                alt={album.title}
-                                                class="w-full h-full object-cover"
-                                            />
-                                        {:else}
-                                            <Music
-                                                class="h-17 w-17 text-tertiary"
-                                            />
-                                        {/if}
-                                        <div
-                                            class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
-                                        ></div>
-                                        <div
-                                            class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                        <button
+                                            type="button"
+                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                            aria-label={activeAlbumPlaybackKey ===
+                                                FAVORITES_SLUG &&
+                                            !activeAlbumPlaybackPaused
+                                                ? "Pause playlist"
+                                                : "Play playlist"}
+                                            on:click={toggleFavoritesPlayback}
                                         >
-                                            <button
-                                                type="button"
-                                                class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
-                                                aria-label={activeAlbumPlaybackKey ===
-                                                    album.key &&
-                                                !activeAlbumPlaybackPaused
-                                                    ? "Pause album"
-                                                    : "Play album"}
-                                                on:click={(event) =>
-                                                    toggleAlbumPlayback(
-                                                        event,
-                                                        album,
-                                                    )}
-                                            >
-                                                {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
+                                            {#if activeAlbumPlaybackKey === FAVORITES_SLUG && !activeAlbumPlaybackPaused}
+                                                <span
+                                                    class="flex items-center gap-[3px]"
+                                                >
                                                     <span
-                                                        class="flex items-center gap-[3px]"
-                                                    >
-                                                        <span
-                                                            class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                        ></span>
-                                                        <span
-                                                            class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                        ></span>
-                                                    </span>
-                                                {:else}
-                                                    <span
-                                                        class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
+                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
                                                     ></span>
-                                                {/if}
-                                            </button>
-                                        </div>
+                                                    <span
+                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                    ></span>
+                                                </span>
+                                            {:else}
+                                                <span
+                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
+                                                ></span>
+                                            {/if}
+                                        </button>
                                     </div>
-                                    <p
-                                        class="text-sm font-medium text-white truncate"
-                                        title={album.title}
-                                    >
-                                        {formatAlbumTitle(album.title)}
-                                    </p>
-                                    <p class="text-xs text-secondary truncate">
-                                        {album.artist} • {album.tracks.length}
-                                        tracks
-                                    </p>
                                 </div>
-                            {/each}
+                                <p
+                                    class="text-sm font-medium text-white truncate"
+                                >
+                                    Favorite Tracks
+                                </p>
+                                <p class="text-xs text-secondary truncate">
+                                    Playlist • {favoritesTracks.length} songs
+                                </p>
+                            </button>
                         </div>
                     {/if}
                 </div>

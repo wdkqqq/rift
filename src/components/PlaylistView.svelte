@@ -14,6 +14,7 @@
     import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
     import {
         activeLibraryView,
+        albumOpenRequest,
         favoritesOpenRequest,
         listeningInsightsRefreshToken,
         playlistsRefreshToken,
@@ -94,6 +95,7 @@
     let queuedView: "songs" | "library" | "detail" | null = null;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
     let lastFavoritesRequest = 0;
+    let lastAlbumOpenRequestId = 0;
     let lastPlaylistRefreshToken = 0;
     let lastListeningInsightsToken = 0;
     let hoveredTrackPath: string | null = null;
@@ -605,6 +607,35 @@
         activeLibraryView.set("detail");
     }
 
+    function handleAlbumOpenRequest(request: {
+        title: string;
+        artist: string;
+    }) {
+        const requestedTitle = request.title.trim().toLowerCase();
+        const requestedArtist = request.artist.trim().toLowerCase();
+        if (!requestedTitle || !requestedArtist) return;
+
+        const exact =
+            albums.find(
+                (album) =>
+                    album.title.trim().toLowerCase() === requestedTitle &&
+                    album.artist.trim().toLowerCase() === requestedArtist,
+            ) ?? null;
+
+        if (exact) {
+            openAlbum(exact);
+            return;
+        }
+
+        const fallback =
+            albums.find(
+                (album) => album.title.trim().toLowerCase() === requestedTitle,
+            ) ?? null;
+        if (fallback) {
+            openAlbum(fallback);
+        }
+    }
+
     async function toggleAlbumPlayback(event: MouseEvent, album: AlbumGroup) {
         event.stopPropagation();
         if (album.tracks.length === 0) return;
@@ -777,8 +808,7 @@
     }
 
     $: if ($activeLibraryView === "library" && libraryMode !== "home") {
-        libraryMode = "home";
-        activeAlbumId = null;
+        void animateLibraryModeSwitch("home", null);
     }
 
     $: if ($activeLibraryView !== lastActiveLibraryView) {
@@ -802,6 +832,14 @@
         lastFavoritesRequest = $favoritesOpenRequest;
         libraryMode = "home";
         activeAlbumId = null;
+    }
+
+    $: if (
+        $albumOpenRequest &&
+        $albumOpenRequest.id !== lastAlbumOpenRequestId
+    ) {
+        lastAlbumOpenRequestId = $albumOpenRequest.id;
+        handleAlbumOpenRequest($albumOpenRequest);
     }
 
     $: if ($playlistsRefreshToken !== lastPlaylistRefreshToken) {

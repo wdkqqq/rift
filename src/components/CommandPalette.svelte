@@ -1,7 +1,12 @@
 <script>
   import { onMount } from "svelte";
-  import { commandPaletteOpen } from "../stores/app.ts";
-  import { Search, Music, Loader } from "lucide-svelte";
+  import {
+    commandPaletteOpen,
+    playbackIndex,
+    playbackQueue,
+    requestOpenAlbum,
+  } from "../stores/app";
+  import { Search, Music, Loader, Disc3 } from "lucide-svelte";
   import { writable } from "svelte/store";
   import { invoke } from "@tauri-apps/api/core";
   import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
@@ -16,6 +21,17 @@
 
   $: if (search.length > 0) {
     performSearch(search);
+  } else {
+    items.set([]);
+    activeIndex.set(-1);
+  }
+
+  $: if ($items.length > 0 && $activeIndex >= $items.length) {
+    activeIndex.set(0);
+  }
+
+  $: if ($items.length === 0) {
+    activeIndex.set(-1);
   }
 
   async function getCoverUrl(coverFilename) {
@@ -23,7 +39,6 @@
 
     try {
       const cacheDir = await appCacheDir();
-
       const path = `${cacheDir}/covers/${coverFilename}`;
 
       const data = await readFile(path, {
@@ -39,32 +54,95 @@
     }
   }
 
+  function getAlbumSearchKey(song) {
+    const albumTitleRaw = song.album?.trim();
+    const hasNamedAlbum = !!albumTitleRaw && albumTitleRaw !== "Unknown Album";
+    const albumTitle = hasNamedAlbum ? albumTitleRaw : "Unknown Album";
+    const artist = song.subtitle?.trim() || "Unknown Artist";
+
+    if (hasNamedAlbum) {
+      return `${artist.toLowerCase()}::${albumTitle.toLowerCase()}`;
+    }
+
+    return song.cover
+      ? `cover::${song.cover}`
+      : `path::${song.path.split(/[\\/]/).slice(0, -1).join("/")}`;
+  }
+
   async function performSearch(query) {
     if (query.length < 1) return;
 
     isLoading.set(true);
     try {
-      console.log("Searching for:", query);
       const results = await invoke("search_music", { query });
+      const queryLower = query.trim().toLowerCase();
 
-      const processedResults = await Promise.all(
+      const songs = await Promise.all(
         results.map(async (song) => {
           let coverUrl = null;
           if (song.cover) {
             coverUrl = await getCoverUrl(song.cover);
           }
           return {
+            id: `song::${song.path}`,
+            kind: "song",
             ...song,
             coverUrl,
           };
         }),
       );
 
-      console.log("Processed search results:", processedResults);
-      items.set(processedResults);
+      const albumMap = new Map();
+      for (const song of songs) {
+        if (!song.album.trim().toLowerCase().includes(queryLower)) continue;
+
+        const key = getAlbumSearchKey(song);
+        const existing = albumMap.get(key);
+        if (existing) {
+          existing.tracks.push(song);
+          if (!existing.coverUrl && song.coverUrl) {
+            existing.coverUrl = song.coverUrl;
+          }
+          continue;
+        }
+
+        const artist = song.subtitle?.trim() || "Unknown Artist";
+        const albumTitle =
+          song.album?.trim() && song.album.trim() !== "Unknown Album"
+            ? song.album.trim()
+            : "Unknown Album";
+
+        albumMap.set(key, {
+          id: `album::${key}`,
+          kind: "album",
+          title: albumTitle,
+          subtitle: `${artist} • 1 track`,
+          duration: "Album",
+          coverUrl: song.coverUrl,
+          albumTitle,
+          artist,
+          tracks: [song],
+        });
+      }
+
+      const albums = Array.from(albumMap.values())
+        .map((album) => ({
+          ...album,
+          subtitle: `${album.artist} • ${album.tracks.length} tracks`,
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title));
+
+      const nextItems = [...albums, ...songs];
+      items.set(nextItems);
+      if (nextItems.length === 0) {
+        activeIndex.set(-1);
+      } else {
+        activeIndex.update((prev) => (prev < 0 ? 0 : prev));
+      }
     } catch (error) {
       console.error("Search error:", error);
       items.set([]);
+      activeIndex.set(-1);
     } finally {
       isLoading.set(false);
     }
@@ -73,7 +151,7 @@
   function handleKeydown(event) {
     if (!$commandPaletteOpen) return;
 
-    let currentItems;
+    let currentItems = [];
     const unsubscribe = items.subscribe((value) => {
       currentItems = value;
     });
@@ -98,18 +176,41 @@
 
   function selectItem(index) {
     let currentItem;
+    let currentItems = [];
     const unsubscribe = items.subscribe((value) => {
+      currentItems = value;
       if (value[index]) {
         currentItem = value[index];
       }
     });
     unsubscribe();
 
-    if (currentItem) {
-      console.log("Selected song:", currentItem);
-      alert(`Selected: ${currentItem.title} by ${currentItem.subtitle}`);
+    if (!currentItem) return;
+
+    if (currentItem.kind === "album") {
+      requestOpenAlbum(currentItem.albumTitle, currentItem.artist);
       commandPaletteOpen.set(false);
+      return;
     }
+
+    const queue = currentItems
+      .filter((item) => item.kind === "song")
+      .map((song) => ({
+        title: song.title,
+        subtitle: song.subtitle,
+        album: song.album,
+        duration: song.duration,
+        coverUrl: song.coverUrl,
+        path: song.path,
+      }));
+
+    const queueIndex = queue.findIndex((song) => song.path === currentItem.path);
+    if (queueIndex < 0) return;
+
+    playbackQueue.set(queue);
+    playbackIndex.set(queueIndex);
+    void invoke("playback_load_and_play", { path: currentItem.path });
+    commandPaletteOpen.set(false);
   }
 
   onMount(() => {
@@ -179,6 +280,8 @@
                   alt={item.title}
                   class="w-full h-full object-cover"
                 />
+              {:else if item.kind === "album"}
+                <Disc3 class="h-5 w-5 text-tertiary" />
               {:else}
                 <Music class="h-5 w-5 text-tertiary" />
               {/if}
@@ -190,7 +293,7 @@
               </div>
             </div>
             <div class="text-secondary text-sm ml-2 shrink-0">
-              {item.duration}
+              {item.kind === "album" ? "Open" : item.duration}
             </div>
           </div>
         {/each}

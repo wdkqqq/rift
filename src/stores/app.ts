@@ -9,6 +9,11 @@ export const activeLibraryView = writable<"songs" | "library" | "detail">(
 export const favoritesOpenRequest = writable(0);
 export const playlistsRefreshToken = writable(0);
 export const listeningInsightsRefreshToken = writable(0);
+export const albumOpenRequest = writable<{
+  id: number;
+  title: string;
+  artist: string;
+} | null>(null);
 
 export type PlayerTrack = {
   title: string;
@@ -77,4 +82,12 @@ export function refreshPlaylists() {
 
 export function refreshListeningInsights() {
   listeningInsightsRefreshToken.update((value) => value + 1);
+}
+
+export function requestOpenAlbum(title: string, artist: string) {
+  albumOpenRequest.set({
+    id: Date.now(),
+    title,
+    artist,
+  });
 }

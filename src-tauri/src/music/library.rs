@@ -30,28 +30,37 @@ impl MusicLibrary {
 
     pub fn search(&self, query: &str) -> Vec<Song> {
         let library = self.library.lock().unwrap();
-        let query_lower = query.to_lowercase();
+        let query_lower = query.trim().to_lowercase();
 
         let mut results: Vec<Song> = library
             .values()
             .filter(|song| {
                 song.title.to_lowercase().contains(&query_lower)
                     || song.subtitle.to_lowercase().contains(&query_lower)
+                    || song.album.to_lowercase().contains(&query_lower)
             })
             .cloned()
             .collect();
 
         results.sort_by(|a, b| {
-            let a_title_match = a.title.to_lowercase().contains(&query_lower);
-            let b_title_match = b.title.to_lowercase().contains(&query_lower);
+            let score = |song: &Song| -> usize {
+                if song.title.to_lowercase().contains(&query_lower) {
+                    return 0;
+                }
+                if song.subtitle.to_lowercase().contains(&query_lower) {
+                    return 1;
+                }
+                if song.album.to_lowercase().contains(&query_lower) {
+                    return 2;
+                }
+                3
+            };
 
-            if a_title_match && !b_title_match {
-                std::cmp::Ordering::Less
-            } else if !a_title_match && b_title_match {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
+            score(a)
+                .cmp(&score(b))
+                .then_with(|| a.subtitle.cmp(&b.subtitle))
+                .then_with(|| a.album.cmp(&b.album))
+                .then_with(|| a.title.cmp(&b.title))
         });
 
         results

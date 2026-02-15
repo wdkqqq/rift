@@ -52,6 +52,8 @@
 
     const FAVORITES_SLUG = "favorites-tracks";
     const SONGS_PAGE_SIZE = 10;
+    const ALBUM_NAME_MAX_CHARS = 28;
+    const ALBUM_TITLE_MAX_CHARS = 28;
 
     const coverUrlCache = new Map<string, string>();
     const artistUrlCache = new Map<string, string>();
@@ -114,7 +116,7 @@
     $: selectedTitle = isSongsView
         ? "Library"
         : libraryMode === "album"
-          ? (selectedAlbum?.title ?? "Album")
+          ? formatAlbumTitle(selectedAlbum?.title ?? "Album")
           : "Favorite songs";
     $: selectedSubtitle = isSongsView
         ? `${allSongs.length} songs`
@@ -158,6 +160,18 @@
         const [mins, secs] = duration.split(":").map((value) => Number(value));
         if (!Number.isFinite(mins) || !Number.isFinite(secs)) return 0;
         return mins * 60 + secs;
+    }
+
+    function formatAlbumName(album: string): string {
+        const normalized = album.trim();
+        if (normalized.length <= ALBUM_NAME_MAX_CHARS) return normalized;
+        return `${normalized.slice(0, ALBUM_NAME_MAX_CHARS - 1)}...`;
+    }
+
+    function formatAlbumTitle(title: string): string {
+        const normalized = title.trim();
+        if (normalized.length <= ALBUM_TITLE_MAX_CHARS) return normalized;
+        return `${normalized.slice(0, ALBUM_TITLE_MAX_CHARS - 1)}...`;
     }
 
     async function animateViewSwitch(nextView: "songs" | "library" | "detail") {
@@ -816,8 +830,9 @@
                                             </div>
                                             <p
                                                 class="text-sm font-medium text-white truncate"
+                                                title={album.title}
                                             >
-                                                {album.title}
+                                                {formatAlbumTitle(album.title)}
                                             </p>
                                             <p
                                                 class="text-xs text-secondary truncate"
@@ -945,7 +960,9 @@
                                     >
                                         Album
                                     </p>
-                                    <h1 class="text-7xl font-bold mt-2 mb-4">
+                                    <h1
+                                        class="text-7xl font-bold mt-2 mb-4 truncate whitespace-nowrap max-w-full"
+                                    >
                                         {selectedTitle}
                                     </h1>
                                     <p class="text-secondary">
@@ -1096,9 +1113,14 @@
                                             </div>
                                         </div>
                                         <div
-                                            class="col-span-2 flex items-center text-secondary"
+                                            class="col-span-2 flex items-center text-secondary min-w-0"
                                         >
-                                            {song.album}
+                                            <span
+                                                class="block w-full truncate whitespace-nowrap"
+                                                title={song.album}
+                                            >
+                                                {formatAlbumName(song.album)}
+                                            </span>
                                         </div>
                                         <div
                                             class="col-span-2 flex items-center justify-end text-secondary"
@@ -1170,7 +1192,9 @@
                                     ? "Album"
                                     : "Favorites"}
                             </p>
-                            <h1 class="text-7xl font-bold mt-2 mb-4">
+                            <h1
+                                class="text-7xl font-bold mt-2 mb-4 truncate whitespace-nowrap max-w-full"
+                            >
                                 {selectedTitle}
                             </h1>
                             <p class="text-secondary">{selectedSubtitle}</p>
@@ -1374,9 +1398,14 @@
                                             </div>
                                         </div>
                                         <div
-                                            class="col-span-2 flex items-center text-secondary"
+                                            class="col-span-2 flex items-center text-secondary min-w-0"
                                         >
-                                            {song.album}
+                                            <span
+                                                class="block w-full truncate whitespace-nowrap"
+                                                title={song.album}
+                                            >
+                                                {formatAlbumName(song.album)}
+                                            </span>
                                         </div>
                                         <div
                                             class="col-span-2 flex items-center justify-end text-secondary"
@@ -1473,8 +1502,9 @@
                                     </div>
                                     <p
                                         class="text-sm font-medium text-white truncate"
+                                        title={album.title}
                                     >
-                                        {album.title}
+                                        {formatAlbumTitle(album.title)}
                                     </p>
                                     <p class="text-xs text-secondary truncate">
                                         {album.artist} • {album.tracks.length}

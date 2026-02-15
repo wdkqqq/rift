@@ -1,6 +1,8 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import { onDestroy, onMount } from "svelte";
+    import { cubicOut } from "svelte/easing";
+    import { scale } from "svelte/transition";
     import {
         Shuffle,
         SkipBack,
@@ -444,9 +446,14 @@
 
                         {#if playlistPopoverOpen}
                             <div
-                                class="absolute left-0 bottom-full mb-2 w-64 rounded-lg border border-border bg-background [box-shadow:0_12px_28px_rgba(0,0,0,0.35)] p-2 z-30"
+                                class="absolute left-0 bottom-full mb-2 w-64 origin-bottom-left rounded-lg border border-border bg-background [box-shadow:0_12px_28px_rgba(0,0,0,0.35)] p-2 z-30"
                                 role="menu"
                                 aria-label="Choose playlist"
+                                transition:scale={{
+                                    duration: 180,
+                                    easing: cubicOut,
+                                    start: 0.96,
+                                }}
                             >
                                 <div
                                     class="flex items-center gap-2 rounded-md border border-divider px-2 py-1.5 mb-2"

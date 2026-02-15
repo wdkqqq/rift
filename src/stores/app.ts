@@ -8,6 +8,7 @@ export const activeLibraryView = writable<"songs" | "library" | "detail">(
 );
 export const favoritesOpenRequest = writable(0);
 export const playlistsRefreshToken = writable(0);
+export const listeningInsightsRefreshToken = writable(0);
 
 export type PlayerTrack = {
   title: string;
@@ -72,4 +73,8 @@ export function notifyError(message: string, durationMs?: number) {
 
 export function refreshPlaylists() {
   playlistsRefreshToken.update((value) => value + 1);
+}
+
+export function refreshListeningInsights() {
+  listeningInsightsRefreshToken.update((value) => value + 1);
 }

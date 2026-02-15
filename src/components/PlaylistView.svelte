@@ -16,6 +16,7 @@
     import {
         activeLibraryView,
         favoritesOpenRequest,
+        listeningInsightsRefreshToken,
         playlistsRefreshToken,
         playbackIndex,
         playbackQueue,
@@ -25,6 +26,7 @@
         title: string;
         subtitle: string;
         album: string;
+        added_at: number;
         duration: string;
         cover: string;
         path: string;
@@ -50,8 +52,23 @@
         imageUrl: string | null;
     };
 
+    type HomeSectionId = "continue" | "recently-added" | "most-played-week";
+
+    type HomeAlbumSection = {
+        id: HomeSectionId;
+        title: string;
+        emptyText: string;
+        albums: AlbumGroup[];
+    };
+
+    type HomeInsights = {
+        continue_listening_paths: string[];
+        most_played_week_paths: string[];
+    };
+
     const FAVORITES_SLUG = "favorites-tracks";
     const SONGS_PAGE_SIZE = 10;
+    const HOME_SECTION_SIZE = 12;
     const ALBUM_NAME_MAX_CHARS = 28;
     const ALBUM_TITLE_MAX_CHARS = 28;
 
@@ -59,7 +76,9 @@
     const artistUrlCache = new Map<string, string>();
 
     let albums: AlbumGroup[] = [];
-    let homeAlbums: AlbumGroup[] = [];
+    let continueListeningAlbums: AlbumGroup[] = [];
+    let recentlyAddedAlbums: AlbumGroup[] = [];
+    let mostPlayedWeekAlbums: AlbumGroup[] = [];
     let artists: ArtistGroup[] = [];
     let allSongs: SongWithCover[] = [];
     let favoritesTracks: SongWithCover[] = [];
@@ -75,6 +94,7 @@
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
     let lastFavoritesRequest = 0;
     let lastPlaylistRefreshToken = 0;
+    let lastListeningInsightsToken = 0;
     let hoveredTrackPath: string | null = null;
     let pausedTrackPath: string | null = null;
     let activeAlbumPlaybackKey: string | null = null;
@@ -86,7 +106,11 @@
         mode: "home" | "album";
         albumId: string | null;
     } | null = null;
-    let albumRowElement: HTMLDivElement | null = null;
+    let sectionRowElements: Record<HomeSectionId, HTMLDivElement | null> = {
+        continue: null,
+        "recently-added": null,
+        "most-played-week": null,
+    };
     let artistRowElement: HTMLDivElement | null = null;
     let contentElement: HTMLDivElement | null = null;
     let lastActiveLibraryView: "songs" | "library" | "detail" = "songs";
@@ -134,6 +158,26 @@
     $: if (allSongs.length > 0 && visibleSongsCount > allSongs.length) {
         visibleSongsCount = allSongs.length;
     }
+    $: homeAlbumSections = [
+        {
+            id: "continue",
+            title: "Continue listening",
+            emptyText: "Start playback to build this section.",
+            albums: continueListeningAlbums,
+        },
+        {
+            id: "recently-added",
+            title: "Recently added",
+            emptyText: "No recently added albums found.",
+            albums: recentlyAddedAlbums,
+        },
+        {
+            id: "most-played-week",
+            title: "Most played this week",
+            emptyText: "No listens in the last 7 days yet.",
+            albums: mostPlayedWeekAlbums,
+        },
+    ] satisfies HomeAlbumSection[];
 
     function wait(ms: number) {
         return new Promise<void>((resolve) => {
@@ -397,13 +441,85 @@
         }
     }
 
-    function shuffledAlbums(items: AlbumGroup[]) {
-        const next = [...items];
-        for (let i = next.length - 1; i > 0; i -= 1) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [next[i], next[j]] = [next[j], next[i]];
+    function pickAlbumsByTrackPaths(
+        paths: string[],
+        trackAlbumKeys: Map<string, string>,
+        albumsByKey: Map<string, AlbumGroup>,
+    ): AlbumGroup[] {
+        const picked: AlbumGroup[] = [];
+        const seen = new Set<string>();
+
+        for (const path of paths) {
+            const key = trackAlbumKeys.get(path);
+            if (!key || seen.has(key)) continue;
+            const album = albumsByKey.get(key);
+            if (!album) continue;
+            seen.add(key);
+            picked.push(album);
+            if (picked.length >= HOME_SECTION_SIZE) break;
         }
-        return next;
+
+        return picked;
+    }
+
+    function mapTracksToAlbums(albumGroups: AlbumGroup[]) {
+        const albumsByKey = new Map(
+            albumGroups.map((album) => [album.key, album]),
+        );
+        const trackAlbumKeys = new Map<string, string>();
+
+        for (const album of albumGroups) {
+            for (const track of album.tracks) {
+                trackAlbumKeys.set(track.path, album.key);
+            }
+        }
+
+        return { albumsByKey, trackAlbumKeys };
+    }
+
+    async function refreshListeningSections(albumGroups: AlbumGroup[]) {
+        if (albumGroups.length === 0) {
+            continueListeningAlbums = [];
+            mostPlayedWeekAlbums = [];
+            return;
+        }
+
+        const { albumsByKey, trackAlbumKeys } = mapTracksToAlbums(albumGroups);
+
+        try {
+            const insights = await invoke<HomeInsights>("get_home_insights");
+            continueListeningAlbums = pickAlbumsByTrackPaths(
+                insights.continue_listening_paths,
+                trackAlbumKeys,
+                albumsByKey,
+            );
+            mostPlayedWeekAlbums = pickAlbumsByTrackPaths(
+                insights.most_played_week_paths,
+                trackAlbumKeys,
+                albumsByKey,
+            );
+        } catch {
+            continueListeningAlbums = [];
+            mostPlayedWeekAlbums = [];
+        }
+    }
+
+    async function loadHomeSections(
+        songs: SongWithCover[],
+        albumGroups: AlbumGroup[],
+    ) {
+        const { albumsByKey, trackAlbumKeys } = mapTracksToAlbums(albumGroups);
+
+        const recentlyAddedPaths = [...songs]
+            .sort((a, b) => b.added_at - a.added_at)
+            .map((song) => song.path);
+        recentlyAddedAlbums = pickAlbumsByTrackPaths(
+            recentlyAddedPaths,
+            trackAlbumKeys,
+            albumsByKey,
+        );
+
+        await refreshListeningSections(albumGroups);
     }
 
     async function loadAlbums() {
@@ -421,7 +537,7 @@
 
             allSongs = withCover;
             albums = buildAlbums(withCover);
-            homeAlbums = shuffledAlbums(albums);
+            await loadHomeSections(withCover, albums);
             await loadArtists(withCover);
             if (
                 libraryMode === "album" &&
@@ -434,7 +550,9 @@
         } catch {
             albums = [];
             allSongs = [];
-            homeAlbums = [];
+            continueListeningAlbums = [];
+            recentlyAddedAlbums = [];
+            mostPlayedWeekAlbums = [];
             artists = [];
         } finally {
             isLibraryLoading = false;
@@ -463,8 +581,12 @@
         activeLibraryView.set("detail");
     }
 
-    function scrollLibraryRow(row: "albums" | "artists", direction: -1 | 1) {
-        const target = row === "albums" ? albumRowElement : artistRowElement;
+    function scrollLibraryRow(
+        row: HomeSectionId | "artists",
+        direction: -1 | 1,
+    ) {
+        const target =
+            row === "artists" ? artistRowElement : sectionRowElements[row];
         if (!target) return;
 
         const offset = Math.max(240, Math.round(target.clientWidth * 0.82));
@@ -654,6 +776,11 @@
         void loadFavoriteTracks();
     }
 
+    $: if ($listeningInsightsRefreshToken !== lastListeningInsightsToken) {
+        lastListeningInsightsToken = $listeningInsightsRefreshToken;
+        void refreshListeningSections(albums);
+    }
+
     onMount(() => {
         loadAlbums();
         void loadFavoriteTracks();
@@ -737,114 +864,130 @@
                             </div>
                         </section>
 
-                        {#if albums.length > 0}
+                        {#each homeAlbumSections as section (section.id)}
                             <section>
                                 <div
                                     class="mb-4 flex items-center justify-between"
                                 >
                                     <h2 class="text-xl font-semibold">
-                                        For you
+                                        {section.title}
                                     </h2>
                                     <div class="flex items-center gap-2">
                                         <button
                                             type="button"
                                             class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
-                                            aria-label="Scroll albums left"
+                                            aria-label="Scroll section left"
                                             on:click={() =>
-                                                scrollLibraryRow("albums", -1)}
+                                                scrollLibraryRow(
+                                                    section.id,
+                                                    -1,
+                                                )}
                                         >
                                             <ChevronLeft class="h-4 w-4" />
                                         </button>
                                         <button
                                             type="button"
                                             class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
-                                            aria-label="Scroll albums right"
+                                            aria-label="Scroll section right"
                                             on:click={() =>
-                                                scrollLibraryRow("albums", 1)}
+                                                scrollLibraryRow(section.id, 1)}
                                         >
                                             <ChevronRight class="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
-                                <div
-                                    bind:this={albumRowElement}
-                                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
-                                >
-                                    {#each homeAlbums as album}
-                                        <div
-                                            class="w-[180px] shrink-0 text-left group"
-                                            on:click={() => openAlbum(album)}
-                                        >
+                                {#if section.albums.length === 0}
+                                    <div
+                                        class="px-1 py-2 text-sm text-secondary"
+                                    >
+                                        {section.emptyText}
+                                    </div>
+                                {:else}
+                                    <div
+                                        bind:this={
+                                            sectionRowElements[section.id]
+                                        }
+                                        class="flex gap-4 overflow-x-auto pb-2 scrollbar-none"
+                                    >
+                                        {#each section.albums as album}
                                             <div
-                                                class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                                class="w-[180px] shrink-0 text-left group"
+                                                on:click={() =>
+                                                    openAlbum(album)}
                                             >
-                                                {#if album.coverUrl}
-                                                    <img
-                                                        src={album.coverUrl}
-                                                        alt={album.title}
-                                                        class="w-full h-full object-cover"
-                                                    />
-                                                {:else}
-                                                    <Music
-                                                        class="h-17 w-17 text-tertiary"
-                                                    />
-                                                {/if}
                                                 <div
-                                                    class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
-                                                ></div>
-                                                <div
-                                                    class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                                 >
-                                                    <button
-                                                        type="button"
-                                                        class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
-                                                        aria-label={activeAlbumPlaybackKey ===
-                                                            album.key &&
-                                                        !activeAlbumPlaybackPaused
-                                                            ? "Pause album"
-                                                            : "Play album"}
-                                                        on:click={(event) =>
-                                                            toggleAlbumPlayback(
-                                                                event,
-                                                                album,
-                                                            )}
+                                                    {#if album.coverUrl}
+                                                        <img
+                                                            src={album.coverUrl}
+                                                            alt={album.title}
+                                                            class="w-full h-full object-cover"
+                                                        />
+                                                    {:else}
+                                                        <Music
+                                                            class="h-17 w-17 text-tertiary"
+                                                        />
+                                                    {/if}
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                    ></div>
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     >
-                                                        {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
-                                                            <span
-                                                                class="flex items-center gap-[3px]"
-                                                            >
+                                                        <button
+                                                            type="button"
+                                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                            aria-label={activeAlbumPlaybackKey ===
+                                                                album.key &&
+                                                            !activeAlbumPlaybackPaused
+                                                                ? "Pause album"
+                                                                : "Play album"}
+                                                            on:click={(event) =>
+                                                                toggleAlbumPlayback(
+                                                                    event,
+                                                                    album,
+                                                                )}
+                                                        >
+                                                            {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
                                                                 <span
-                                                                    class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                ></span>
+                                                                    class="flex items-center gap-[3px]"
+                                                                >
+                                                                    <span
+                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    ></span>
+                                                                    <span
+                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    ></span>
+                                                                </span>
+                                                            {:else}
                                                                 <span
-                                                                    class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
                                                                 ></span>
-                                                            </span>
-                                                        {:else}
-                                                            <span
-                                                                class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
-                                                            ></span>
-                                                        {/if}
-                                                    </button>
+                                                            {/if}
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                <p
+                                                    class="text-sm font-medium text-white truncate"
+                                                    title={album.title}
+                                                >
+                                                    {formatAlbumTitle(
+                                                        album.title,
+                                                    )}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-secondary truncate"
+                                                >
+                                                    {album.artist} • {album
+                                                        .tracks.length} tracks
+                                                </p>
                                             </div>
-                                            <p
-                                                class="text-sm font-medium text-white truncate"
-                                                title={album.title}
-                                            >
-                                                {formatAlbumTitle(album.title)}
-                                            </p>
-                                            <p
-                                                class="text-xs text-secondary truncate"
-                                            >
-                                                {album.artist} • {album.tracks
-                                                    .length} tracks
-                                            </p>
-                                        </div>
-                                    {/each}
-                                </div>
+                                        {/each}
+                                    </div>
+                                {/if}
                             </section>
-                        {/if}
+                        {/each}
 
                         {#if artists.length > 0}
                             <section>

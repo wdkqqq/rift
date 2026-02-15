@@ -10,6 +10,7 @@ mod playlists;
 
 use commands::commands::*;
 use discord::rpc::DiscordRpcService;
+use music::history::ListeningHistoryStore;
 use music::library::MusicLibrary;
 use music::playback::PlaybackService;
 use playlists::store::PlaylistStore;
@@ -30,12 +31,14 @@ fn main() {
     let playback_service = PlaybackService::start();
     let discord_rpc_service = DiscordRpcService::start();
     let playlist_store = PlaylistStore::new();
+    let listening_history = ListeningHistoryStore::new();
 
     tauri::Builder::default()
         .manage(music_library)
         .manage(playback_service)
         .manage(discord_rpc_service)
         .manage(playlist_store)
+        .manage(listening_history)
         .plugin(init())
         .invoke_handler(tauri::generate_handler![
             search_music,
@@ -54,7 +57,8 @@ fn main() {
             add_track_to_playlist,
             remove_track_from_playlist,
             get_track_playlist_memberships,
-            get_artist_images
+            get_artist_images,
+            get_home_insights
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

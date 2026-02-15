@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::time::UNIX_EPOCH;
 
 fn extract_and_cache_cover_with_hash(
     audio_path: &Path,
@@ -137,11 +138,18 @@ pub fn read_audio_metadata(path: &PathBuf) -> Option<Song> {
             let minutes = duration / 60;
             let seconds = duration % 60;
             let duration_str = format!("{}:{:02}", minutes, seconds);
+            let added_at = fs::metadata(path)
+                .ok()
+                .and_then(|meta| meta.created().ok().or_else(|| meta.modified().ok()))
+                .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs() as i64)
+                .unwrap_or(0);
 
             Some(Song {
                 title,
                 subtitle: artist,
                 album,
+                added_at,
                 duration: duration_str,
                 cover: cover_file,
                 path: path.to_string_lossy().to_string(),

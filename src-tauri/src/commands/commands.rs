@@ -1,5 +1,6 @@
 use crate::config::config::{load_config, save_config, Config};
 use crate::discord::rpc::DiscordRpcService;
+use crate::music::history::ListeningHistoryStore;
 use crate::music::library::MusicLibrary;
 use crate::music::playback::{PlaybackService, PlaybackState};
 use crate::playlists::store::PlaylistStore;
@@ -10,6 +11,8 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::State;
+
+const HOME_SECTION_LIMIT: usize = 24;
 
 #[tauri::command]
 pub fn search_music(query: String, state: State<MusicLibrary>) -> Vec<crate::models::models::Song> {
@@ -32,8 +35,12 @@ pub fn playback_load_and_play(
     playback: State<PlaybackService>,
     library: State<MusicLibrary>,
     rpc: State<DiscordRpcService>,
+    history: State<ListeningHistoryStore>,
 ) -> Result<PlaybackState, String> {
     let playback_state = playback.load_and_play(path.clone())?;
+    if let Err(error) = history.record_play(&path) {
+        eprintln!("Failed to persist listening history: {error}");
+    }
     rpc.set_track(library.by_path(&path));
     rpc.sync_playback(
         playback_state.is_playing,
@@ -41,6 +48,20 @@ pub fn playback_load_and_play(
         playback_state.duration,
     );
     Ok(playback_state)
+}
+
+#[derive(Serialize)]
+pub struct HomeInsights {
+    pub continue_listening_paths: Vec<String>,
+    pub most_played_week_paths: Vec<String>,
+}
+
+#[tauri::command]
+pub fn get_home_insights(history: State<ListeningHistoryStore>) -> HomeInsights {
+    HomeInsights {
+        continue_listening_paths: history.recent_paths(HOME_SECTION_LIMIT),
+        most_played_week_paths: history.most_played_week_paths(HOME_SECTION_LIMIT),
+    }
 }
 
 #[tauri::command]

@@ -21,6 +21,7 @@
         notifySuccess,
         playbackIndex,
         playbackQueue,
+        refreshListeningInsights,
         refreshPlaylists,
     } from "../stores/app";
 
@@ -80,6 +81,7 @@
             );
             lastLoadedPath = path;
             applyState(state);
+            refreshListeningInsights();
         } catch (error) {
             console.error("Failed to load track:", error);
             isPlaying = false;

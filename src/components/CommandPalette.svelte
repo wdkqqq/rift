@@ -58,15 +58,15 @@
     const albumTitleRaw = song.album?.trim();
     const hasNamedAlbum = !!albumTitleRaw && albumTitleRaw !== "Unknown Album";
     const albumTitle = hasNamedAlbum ? albumTitleRaw : "Unknown Album";
-    const artist = song.subtitle?.trim() || "Unknown Artist";
+    const folderPath = song.path.split(/[\\/]/).slice(0, -1).join("/").toLowerCase();
 
     if (hasNamedAlbum) {
-      return `${artist.toLowerCase()}::${albumTitle.toLowerCase()}`;
+      return `album::${albumTitle.toLowerCase()}::${folderPath}`;
     }
 
     return song.cover
       ? `cover::${song.cover}`
-      : `path::${song.path.split(/[\\/]/).slice(0, -1).join("/")}`;
+      : `path::${folderPath}`;
   }
 
   async function performSearch(query) {

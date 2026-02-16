@@ -576,18 +576,18 @@
                     >{formatTime(effectiveCurrentTime)}</span
                 >
                 <div
-                    class="group relative flex-1 h-1 bg-[#404040] rounded-full"
+                    class="group relative flex-1 h-1 bg-[#404040] rounded-full cursor-default"
                 >
                     <div
                         class="absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
                         style:width={progressPercent}
                     >
                         <div
-                            class="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white opacity-0 transition-opacity group-hover:opacity-100"
+                            class="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white opacity-0 scale-100 transition-all duration-200 ease-out group-hover:opacity-100 group-active:scale-125"
                         ></div>
                     </div>
                     <input
-                        class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        class="absolute inset-0 w-full h-full opacity-0 cursor-default"
                         type="range"
                         min="0"
                         max={duration > 0 ? duration : 0}
@@ -612,17 +612,17 @@
                 <Volume2 class="h-5 w-5" />
             </button>
 
-            <div class="group w-24 relative h-1 bg-[#404040] rounded-full">
+            <div class="group w-24 relative h-1 bg-[#404040] rounded-full cursor-default">
                 <div
                     class="absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
                     style:width={volumePercent}
                 >
                     <div
-                        class="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white opacity-0 transition-opacity group-hover:opacity-100"
+                        class="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full bg-white opacity-0 scale-100 transition-all duration-200 ease-out group-hover:opacity-100 group-active:scale-125"
                     ></div>
                 </div>
                 <input
-                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-default"
                     type="range"
                     min="0"
                     max="100"

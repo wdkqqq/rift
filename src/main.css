@@ -117,7 +117,6 @@ body.macos-traffic-lights .window-nav-button {
     justify-content: center;
     line-height: 1;
     font-size: 12px;
-    cursor: pointer;
 }
 
 body.macos-traffic-lights .window-nav-button:hover {
@@ -158,7 +157,6 @@ body.macos-traffic-lights .app-shell {
 
 .checkbox-slider {
     position: absolute;
-    cursor: pointer;
     top: 0;
     left: 0;
     right: 0;

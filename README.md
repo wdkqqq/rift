@@ -14,13 +14,8 @@
     <img src="/resources/screenshot-1.png"
         title="Interface Screenshot 1" alt="Screenshot 1" width="700" />
     <br/>
-    <br/>
     <img src="/resources/screenshot-2.png"
         title="Interface Screenshot 2" alt="Screenshot 2" width="700" />
-    <br/>
-    <br/>
-    <img src="/resources/screenshot-3.png"
-        title="Interface Screenshot 3" alt="Screenshot 3" width="700" />
 </div>
 
 > [!WARNING]

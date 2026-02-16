@@ -43,6 +43,7 @@
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let isSeeking = false;
     let seekPreview = 0;
+    let sliderValue = 0;
     let isAdvancing = false;
     let isSyncing = false;
     let repeatMode: "off" | "all" | "one" = "off";
@@ -61,7 +62,7 @@
 
     $: currentTrack = $playbackQueue[$playbackIndex] ?? null;
     $: progressPercent =
-        duration > 0 ? `${(effectiveCurrentTime / duration) * 100}%` : "0%";
+        duration > 0 ? `${(sliderValue / duration) * 100}%` : "0%";
     $: volumePercent = `${volume}%`;
     $: effectiveCurrentTime = isSeeking ? seekPreview : currentTime;
     $: filteredPlaylists = playlists.filter((playlist) =>
@@ -202,7 +203,6 @@
         const target = event.currentTarget as HTMLInputElement;
         const nextValue = Number(target.value);
         seekPreview = nextValue;
-        isSeeking = false;
 
         try {
             const state = await invoke<PlaybackState>("playback_seek", {
@@ -211,7 +211,13 @@
             applyState(state);
         } catch (error) {
             console.error("Failed to seek playback:", error);
+        } finally {
+            isSeeking = false;
         }
+    }
+
+    $: if (!isSeeking) {
+        sliderValue = effectiveCurrentTime;
     }
 
     async function setVolume(event: Event) {
@@ -592,7 +598,7 @@
                         min="0"
                         max={duration > 0 ? duration : 0}
                         step="0.1"
-                        value={duration > 0 ? effectiveCurrentTime : 0}
+                        bind:value={sliderValue}
                         on:input={startSeek}
                         on:change={commitSeek}
                     />

@@ -117,6 +117,7 @@ body.macos-traffic-lights .window-nav-button {
     justify-content: center;
     line-height: 1;
     font-size: 12px;
+    transition: all 0.2s ease;
 }
 
 body.macos-traffic-lights .window-nav-button:hover {

@@ -20,7 +20,12 @@
     }
 
     function handleKeydown(e) {
-        if (e.ctrlKey && e.key === "f") {
+        const key = e.key.toLowerCase();
+        const shouldOpenSearch =
+            (e.metaKey && (key === "f" || key === "k")) ||
+            (e.ctrlKey && (key === "f" || key === "k"));
+
+        if (shouldOpenSearch) {
             e.preventDefault();
             commandPaletteOpen.set(true);
         }

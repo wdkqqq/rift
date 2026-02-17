@@ -121,6 +121,7 @@
     const HOME_SECTION_SIZE = 12;
     const ALBUM_NAME_MAX_CHARS = 28;
     const ALBUM_TITLE_MAX_CHARS = 28;
+    const HERO_TITLE_MAX_CHARS = 14;
 
     const coverUrlCache = new Map<string, string>();
     const artistUrlCache = new Map<string, string>();
@@ -262,6 +263,12 @@
         const normalized = title.trim();
         if (normalized.length <= ALBUM_TITLE_MAX_CHARS) return normalized;
         return `${normalized.slice(0, ALBUM_TITLE_MAX_CHARS - 1)}...`;
+    }
+
+    function formatHeroTitle(title: string): string {
+        const normalized = title.trim();
+        if (normalized.length <= HERO_TITLE_MAX_CHARS) return normalized;
+        return `${normalized.slice(0, HERO_TITLE_MAX_CHARS - 1)}...`;
     }
 
     function compareTracksForAlbum(a: SongWithCover, b: SongWithCover): number {
@@ -1762,7 +1769,7 @@
                                     <h1
                                         class="text-7xl font-bold mt-2 mb-4 truncate whitespace-nowrap max-w-full"
                                     >
-                                        {selectedTitle}
+                                        {formatHeroTitle(selectedTitle)}
                                     </h1>
                                     <p class="text-secondary">
                                         {selectedSubtitle}
@@ -2022,7 +2029,7 @@
                             <h1
                                 class="text-7xl font-bold mt-2 mb-4 truncate whitespace-nowrap max-w-full"
                             >
-                                {selectedTitle}
+                                {formatHeroTitle(selectedTitle)}
                             </h1>
                             <p class="text-secondary">{selectedSubtitle}</p>
                         </div>

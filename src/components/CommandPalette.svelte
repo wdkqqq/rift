@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from "svelte";
+    import { onMount, tick } from "svelte";
     import {
         commandPaletteOpen,
         playbackIndex,
@@ -16,6 +16,7 @@
     let items = writable([]);
     let isLoading = writable(false);
     let activeIndex = writable(-1);
+    let searchInput;
 
     $: hasSearchText = search.length > 0;
 
@@ -32,6 +33,12 @@
 
     $: if ($items.length === 0) {
         activeIndex.set(-1);
+    }
+
+    $: if ($commandPaletteOpen) {
+        void tick().then(() => {
+            searchInput?.focus();
+        });
     }
 
     async function getCoverUrl(coverFilename) {
@@ -239,6 +246,7 @@
             <input
                 type="text"
                 bind:value={search}
+                bind:this={searchInput}
                 id="command-search"
                 placeholder="Search songs, artists, albums..."
                 class="w-full bg-[bg-background] py-2.5 pl-10 text-white placeholder-secondary focus:outline-none"

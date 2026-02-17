@@ -15,6 +15,8 @@ export const albumOpenRequest = writable<{
   artist: string;
 } | null>(null);
 
+export const activeGenreStation = writable<string | null>(null);
+
 export type PlayerTrack = {
   title: string;
   subtitle: string;

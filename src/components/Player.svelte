@@ -25,6 +25,7 @@
         playbackQueue,
         refreshListeningInsights,
         refreshPlaylists,
+        activeGenreStation,
     } from "../stores/app";
 
     type PlaybackState = {
@@ -225,6 +226,8 @@
         if ($playbackQueue.length === 0) return;
         if ($playbackIndex < $playbackQueue.length - 1) {
             playbackIndex.set($playbackIndex + 1);
+        } else if ($activeGenreStation !== null) {
+            playbackIndex.set(0);
         }
     }
 

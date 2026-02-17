@@ -20,6 +20,7 @@
         playlistsRefreshToken,
         playbackIndex,
         playbackQueue,
+        activeGenreStation,
     } from "../stores/app";
 
     type LibrarySong = {
@@ -31,6 +32,7 @@
         duration: string;
         cover: string;
         path: string;
+        genre?: string | null;
     };
 
     type SongWithCover = LibrarySong & {
@@ -63,6 +65,26 @@
         emptyText: string;
         albums: AlbumGroup[];
     };
+
+    type GenreStation = {
+        id: string;
+        genre: string;
+        color: string;
+        tracks: SongWithCover[];
+    };
+
+    const genreColors: string[] = [
+        "bg-[#8B7355]",
+        "bg-[#6B5B7B]",
+        "bg-[#5B7B6B]",
+        "bg-[#7B6B5B]",
+        "bg-[#5B6B7B]",
+        "bg-[#7B5B6B]",
+        "bg-[#6B7B5B]",
+        "bg-[#5B7B7B]",
+    ];
+
+    let genreStations: GenreStation[] = [];
 
     type HomeInsights = {
         continue_listening_paths: string[];
@@ -103,6 +125,7 @@
     let pausedTrackPath: string | null = null;
     let activeAlbumPlaybackKey: string | null = null;
     let activeAlbumPlaybackPaused = false;
+    let activeGenreStationPaused = false;
     let libraryContentStyle =
         "opacity: 1; transform: translateY(0); transition: opacity 240ms ease, transform 240ms ease;";
     let isLibraryAnimating = false;
@@ -116,6 +139,7 @@
         "most-played-week": null,
     };
     let artistRowElement: HTMLDivElement | null = null;
+    let genreStationsRowElement: HTMLDivElement | null = null;
     let contentElement: HTMLDivElement | null = null;
     let lastActiveLibraryView: "songs" | "library" | "detail" = "songs";
     let isSongsView = false;
@@ -467,6 +491,66 @@
         });
     }
 
+    function buildGenreStations(songs: SongWithCover[]): GenreStation[] {
+        const genreAlbumMap = new Map<
+            string,
+            { tracks: SongWithCover[]; albums: Set<string> }
+        >();
+
+        for (const song of songs) {
+            const rawGenre = song.genre?.trim();
+            if (!rawGenre || rawGenre.toLowerCase() === "unknown genre")
+                continue;
+
+            const genres = rawGenre
+                .split("/")
+                .map((g) => g.trim())
+                .filter((g) => g.length > 0);
+
+            for (const genre of genres) {
+                const genreLower = genre.toLowerCase();
+                const existing = genreAlbumMap.get(genreLower);
+                if (existing) {
+                    existing.tracks.push(song);
+                    existing.albums.add(song.album.toLowerCase());
+                } else {
+                    genreAlbumMap.set(genreLower, {
+                        tracks: [song],
+                        albums: new Set([song.album.toLowerCase()]),
+                    });
+                }
+            }
+        }
+
+        const result: GenreStation[] = [];
+
+        for (const [genre, data] of genreAlbumMap.entries()) {
+            if (data.albums.size < 3 || data.tracks.length < 20) continue;
+
+            const displayGenre = genre.charAt(0).toUpperCase() + genre.slice(1);
+
+            const randomIndex = Math.floor(Math.random() * genreColors.length);
+            let color = genreColors[randomIndex];
+
+            for (const existing of result) {
+                if (existing.color === color) {
+                    color = genreColors[(randomIndex + 1) % genreColors.length];
+                }
+            }
+
+            result.push({
+                id: `genre-${genre}`,
+                genre: displayGenre,
+                color,
+                tracks: data.tracks,
+            });
+
+            if (result.length >= 8) break;
+        }
+
+        return result.sort((a, b) => b.tracks.length - a.tracks.length);
+    }
+
     async function loadArtists(songs: SongWithCover[]) {
         const base = buildArtists(songs);
         if (base.length === 0) {
@@ -599,6 +683,7 @@
             albums = buildAlbums(withCover);
             await loadHomeSections(withCover, albums);
             await loadArtists(withCover);
+            genreStations = buildGenreStations(withCover);
             if (
                 libraryMode === "album" &&
                 activeAlbumId &&
@@ -614,6 +699,7 @@
             recentlyAddedAlbums = [];
             mostPlayedWeekAlbums = [];
             artists = [];
+            genreStations = [];
         } finally {
             isLibraryLoading = false;
         }
@@ -651,6 +737,19 @@
 
         const offset = Math.max(240, Math.round(target.clientWidth * 0.82));
         target.scrollBy({
+            left: offset * direction,
+            behavior: "smooth",
+        });
+    }
+
+    function scrollGenreStations(direction: -1 | 1) {
+        if (!genreStationsRowElement) return;
+
+        const offset = Math.max(
+            240,
+            Math.round(genreStationsRowElement.clientWidth * 0.82),
+        );
+        genreStationsRowElement.scrollBy({
             left: offset * direction,
             behavior: "smooth",
         });
@@ -714,10 +813,57 @@
         }
 
         pausedTrackPath = null;
+        activeGenreStation.set(null);
         playTrack(0, album.tracks, album.key);
         await tick();
         await invoke("playback_load_and_play", {
             path: album.tracks[0].path,
+        });
+    }
+
+    async function toggleGenreStationPlayback(
+        event: MouseEvent,
+        genreStation: GenreStation,
+    ) {
+        event.stopPropagation();
+        if (genreStation.tracks.length === 0) return;
+
+        const isCurrentGenreStation = $activeGenreStation === genreStation.id;
+
+        if (isCurrentGenreStation) {
+            if (activeGenreStationPaused) {
+                activeGenreStationPaused = false;
+                await tick();
+                await invoke("playback_play");
+                return;
+            }
+            activeGenreStationPaused = true;
+            await tick();
+            await invoke("playback_pause");
+            return;
+        }
+
+        const shuffledTracks = [...genreStation.tracks].sort(
+            () => Math.random() - 0.5,
+        );
+        const queue = shuffledTracks.map((track) => ({
+            title: track.title,
+            subtitle: track.subtitle,
+            album: track.album,
+            duration: track.duration,
+            coverUrl: track.coverUrl,
+            path: track.path,
+        }));
+
+        playbackQueue.set(queue);
+        playbackIndex.set(0);
+        activeGenreStation.set(genreStation.id);
+        activeGenreStationPaused = false;
+        activeAlbumPlaybackKey = null;
+
+        await tick();
+        await invoke("playback_load_and_play", {
+            path: shuffledTracks[0].path,
         });
     }
 
@@ -741,6 +887,7 @@
         }
 
         pausedTrackPath = null;
+        activeGenreStation.set(null);
         playTrack(0, favoritesTracks, FAVORITES_SLUG);
         await tick();
         await invoke("playback_load_and_play", {
@@ -1062,6 +1209,83 @@
                                     </div>
                                 {/if}
                             </section>
+
+                            {#if section.id === "recently-added" && genreStations.length >= 3}
+                                <section>
+                                    <div
+                                        class="mb-4 flex items-center justify-between"
+                                    >
+                                        <h2 class="text-xl font-semibold">
+                                            Genre Stations
+                                        </h2>
+                                        <div class="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                                aria-label="Scroll genre stations left"
+                                                on:click={() =>
+                                                    scrollGenreStations(-1)}
+                                            >
+                                                <ChevronLeft class="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                                aria-label="Scroll genre stations right"
+                                                on:click={() =>
+                                                    scrollGenreStations(1)}
+                                            >
+                                                <ChevronRight class="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div
+                                        bind:this={genreStationsRowElement}
+                                        class="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6"
+                                    >
+                                        {#each genreStations as genreStation}
+                                            <div
+                                                class="w-[calc((100%-32px)/3)] shrink-0 h-[70px] rounded-xl {genreStation.color} flex items-center justify-center hover:brightness-90 active:scale-95 [transition:all_0.2s_ease] px-3"
+                                                role="button"
+                                                aria-label={`Play ${genreStation.genre} radio`}
+                                                on:click={(event) =>
+                                                    toggleGenreStationPlayback(
+                                                        event,
+                                                        genreStation,
+                                                    )}
+                                            >
+                                                <div
+                                                    class="flex flex-col items-center gap-0.5 text-white"
+                                                >
+                                                    <span
+                                                        class="text-xs text-white/70"
+                                                    >
+                                                        Genre station
+                                                    </span>
+                                                    <div
+                                                        class="flex items-center gap-1"
+                                                    >
+                                                        {#if $activeGenreStation === genreStation.id && !activeGenreStationPaused}
+                                                            <Pause
+                                                                class="h-3.5 w-3.5 fill-current"
+                                                            />
+                                                        {:else}
+                                                            <Play
+                                                                class="h-3.5 w-3.5 fill-current"
+                                                            />
+                                                        {/if}
+                                                        <span
+                                                            class="text-lg font-semibold"
+                                                        >
+                                                            {genreStation.genre}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {/each}
+                                    </div>
+                                </section>
+                            {/if}
                         {/each}
 
                         {#if artists.length > 0}

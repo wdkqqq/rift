@@ -56,7 +56,12 @@ jobs:
             patchelf
 
       - name: Install JS dependencies
-        run: bun install --frozen-lockfile
+        run: |
+          if [[ "$GITHUB_ACTOR" == "dependabot[bot]" ]]; then
+            bun install
+          else
+            bun install --frozen-lockfile
+          fi
 
       - name: Build Tauri bundle
         run: bunx tauri build --bundles ${{ matrix.bundle }}

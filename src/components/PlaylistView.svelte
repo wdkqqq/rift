@@ -855,6 +855,36 @@
         activeLibraryView.set("detail");
     }
 
+    function getTrackAlbumKey(song: SongWithCover): string {
+        const albumTitleRaw = song.album?.trim();
+        const hasNamedAlbum =
+            !!albumTitleRaw && albumTitleRaw !== "Unknown Album";
+        const albumTitle = hasNamedAlbum ? albumTitleRaw : "Unknown Album";
+        const folderPath = song.path
+            .split(/[\\/]/)
+            .slice(0, -1)
+            .join("/")
+            .toLowerCase();
+        if (hasNamedAlbum) {
+            return `album::${albumTitle.toLowerCase()}::${folderPath}`;
+        }
+        return song.cover ? `cover::${song.cover}` : `path::${folderPath}`;
+    }
+
+    function openAlbumForSong(song: SongWithCover) {
+        const byKey = albums.find(
+            (album) => album.key === getTrackAlbumKey(song),
+        );
+        if (byKey) {
+            openAlbum(byKey);
+            return;
+        }
+        handleAlbumOpenRequest({
+            title: song.album,
+            artist: song.subtitle,
+        });
+    }
+
     function handleAlbumOpenRequest(request: {
         title: string;
         artist: string;
@@ -1863,8 +1893,21 @@
                                             class="col-span-2 flex items-center text-secondary min-w-0"
                                         >
                                             <span
-                                                class="block w-full truncate whitespace-nowrap"
+                                                class="block w-full truncate whitespace-nowrap hover:text-white [transition:color_0.2s_ease]"
                                                 title={song.album}
+                                                role="button"
+                                                tabindex="0"
+                                                on:click={() =>
+                                                    openAlbumForSong(song)}
+                                                on:keydown={(event) => {
+                                                    if (
+                                                        event.key === "Enter" ||
+                                                        event.key === " "
+                                                    ) {
+                                                        event.preventDefault();
+                                                        openAlbumForSong(song);
+                                                    }
+                                                }}
                                             >
                                                 {formatAlbumName(song.album)}
                                             </span>
@@ -2163,8 +2206,21 @@
                                             class="col-span-2 flex items-center text-secondary min-w-0"
                                         >
                                             <span
-                                                class="block w-full truncate whitespace-nowrap"
+                                                class="block w-full truncate whitespace-nowrap hover:text-white [transition:color_0.2s_ease]"
                                                 title={song.album}
+                                                role="button"
+                                                tabindex="0"
+                                                on:click={() =>
+                                                    openAlbumForSong(song)}
+                                                on:keydown={(event) => {
+                                                    if (
+                                                        event.key === "Enter" ||
+                                                        event.key === " "
+                                                    ) {
+                                                        event.preventDefault();
+                                                        openAlbumForSong(song);
+                                                    }
+                                                }}
                                             >
                                                 {formatAlbumName(song.album)}
                                             </span>

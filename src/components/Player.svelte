@@ -23,6 +23,7 @@
         notifySuccess,
         type PlaybackSource,
         playbackIndex,
+        playbackIsPlaying,
         playbackQueue,
         refreshListeningInsights,
         refreshPlaylists,
@@ -99,6 +100,7 @@
 
     function applyState(state: PlaybackState) {
         isPlaying = state.is_playing;
+        playbackIsPlaying.set(state.is_playing);
         currentTime = state.current_time || 0;
         duration = state.duration || 0;
         volume = Math.round((state.volume || 0) * 100);
@@ -109,6 +111,7 @@
 
         if (!currentTrack) {
             isPlaying = false;
+            playbackIsPlaying.set(false);
             currentTime = 0;
             duration = 0;
             return;

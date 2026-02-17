@@ -20,6 +20,7 @@
         playlistsRefreshToken,
         type PlaybackSource,
         playbackIndex,
+        playbackIsPlaying,
         playbackQueue,
         activeGenreStation,
     } from "../stores/app";
@@ -1079,6 +1080,17 @@
         playbackIndex.set(trackIndex);
         activeAlbumPlaybackKey = albumKey;
         activeAlbumPlaybackPaused = false;
+        if (source.kind === "station" && source.id) {
+            if ($activeGenreStation !== source.id) {
+                activeGenreStation.set(source.id);
+            }
+            activeGenreStationPaused = false;
+            return;
+        }
+        if ($activeGenreStation !== null) {
+            activeGenreStation.set(null);
+        }
+        activeGenreStationPaused = true;
     }
 
     function getSongsTabIndex(tab: SongsLibraryTab): number {
@@ -1221,6 +1233,21 @@
     $: if ($listeningInsightsRefreshToken !== lastListeningInsightsToken) {
         lastListeningInsightsToken = $listeningInsightsRefreshToken;
         void refreshListeningSections(albums);
+    }
+
+    $: {
+        const currentSource = $playbackQueue[$playbackIndex]?.source;
+        if (currentSource?.kind === "station" && currentSource.id) {
+            if ($activeGenreStation !== currentSource.id) {
+                activeGenreStation.set(currentSource.id);
+            }
+            activeGenreStationPaused = !$playbackIsPlaying;
+        } else {
+            if ($activeGenreStation !== null) {
+                activeGenreStation.set(null);
+            }
+            activeGenreStationPaused = true;
+        }
     }
 
     onMount(() => {

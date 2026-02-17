@@ -37,6 +37,7 @@ export type PlayerTrack = {
 
 export const playbackQueue = writable<PlayerTrack[]>([]);
 export const playbackIndex = writable(0);
+export const playbackIsPlaying = writable(false);
 
 export type NotificationType = "info" | "success" | "error";
 

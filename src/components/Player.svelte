@@ -162,6 +162,42 @@
             setTimeout(() => {
                 isAdvancing = false;
             }, 100);
+            return;
+        }
+
+        // Queue ended and repeat is off - play random track
+        void playRandomTrack();
+    }
+
+    async function playRandomTrack() {
+        try {
+            const randomTrack = await invoke<{
+                title: string;
+                subtitle: string;
+                album: string;
+                duration: string;
+                cover: string;
+                path: string;
+            } | null>("get_random_track");
+
+            if (!randomTrack) {
+                console.warn("No tracks available in library");
+                return;
+            }
+
+            const track = {
+                title: randomTrack.title,
+                subtitle: randomTrack.subtitle,
+                album: randomTrack.album,
+                duration: randomTrack.duration,
+                coverUrl: randomTrack.cover ? randomTrack.cover : null,
+                path: randomTrack.path,
+            };
+
+            playbackQueue.set([track]);
+            playbackIndex.set(0);
+        } catch (error) {
+            console.error("Failed to get random track:", error);
         }
     }
 
@@ -618,7 +654,9 @@
                 <Volume2 class="h-5 w-5" />
             </button>
 
-            <div class="group w-24 relative h-1 bg-[#404040] rounded-full cursor-default">
+            <div
+                class="group w-24 relative h-1 bg-[#404040] rounded-full cursor-default"
+            >
                 <div
                     class="absolute inset-y-0 left-0 bg-white rounded-full pointer-events-none"
                     style:width={volumePercent}

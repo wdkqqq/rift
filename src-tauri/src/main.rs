@@ -58,7 +58,8 @@ fn main() {
             remove_track_from_playlist,
             get_track_playlist_memberships,
             get_artist_images,
-            get_home_insights
+            get_home_insights,
+            get_random_track
         ])
         .run(tauri::generate_context!())
         .expect("Error while running application");

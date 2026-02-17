@@ -331,3 +331,15 @@ pub fn get_artist_images(artist_names: Vec<String>) -> Result<Vec<ArtistImage>, 
 
     Ok(result)
 }
+
+#[tauri::command]
+pub fn get_random_track(library: State<MusicLibrary>) -> Result<Option<crate::models::models::Song>, String> {
+    let lib = library.library.lock().map_err(|e| e.to_string())?;
+    if lib.is_empty() {
+        return Ok(None);
+    }
+
+    use rand::seq::IteratorRandom;
+    let random_song = lib.values().choose(&mut rand::thread_rng()).cloned();
+    Ok(random_song)
+}

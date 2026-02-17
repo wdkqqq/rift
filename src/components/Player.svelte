@@ -21,6 +21,7 @@
         notifyError,
         notifyInfo,
         notifySuccess,
+        type PlaybackSource,
         playbackIndex,
         playbackQueue,
         refreshListeningInsights,
@@ -82,6 +83,9 @@
                 "playback_load_and_play",
                 {
                     path,
+                    source:
+                        currentTrack?.source ??
+                        ({ kind: "other" } satisfies PlaybackSource),
                 },
             );
             lastLoadedPath = path;
@@ -193,6 +197,7 @@
                 duration: randomTrack.duration,
                 coverUrl: randomTrack.cover ? randomTrack.cover : null,
                 path: randomTrack.path,
+                source: { kind: "other" } satisfies PlaybackSource,
             };
 
             playbackQueue.set([track]);

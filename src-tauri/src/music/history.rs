@@ -9,9 +9,32 @@ const MAX_HISTORY_EVENTS: usize = 5000;
 const WEEK_SECONDS: i64 = 7 * 24 * 60 * 60;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListeningSource {
+    pub kind: String,
+    #[serde(default)]
+    pub id: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ContinueListeningItem {
+    Album {
+        path: String,
+    },
+    Playlist {
+        playlist_slug: String,
+        playlist_name: String,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ListeningEvent {
     path: String,
     played_at: i64,
+    #[serde(default)]
+    source: Option<ListeningSource>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -34,7 +57,7 @@ impl ListeningHistoryStore {
         }
     }
 
-    pub fn record_play(&self, path: &str) -> Result<(), String> {
+    pub fn record_play(&self, path: &str, source: Option<ListeningSource>) -> Result<(), String> {
         let clean_path = path.trim();
         if clean_path.is_empty() {
             return Ok(());
@@ -48,6 +71,7 @@ impl ListeningHistoryStore {
         data.events.push(ListeningEvent {
             path: clean_path.to_string(),
             played_at: Utc::now().timestamp(),
+            source: source.and_then(normalize_source),
         });
 
         if data.events.len() > MAX_HISTORY_EVENTS {
@@ -77,6 +101,72 @@ impl ListeningHistoryStore {
                 if result.len() >= limit {
                     break;
                 }
+            }
+        }
+
+        result
+    }
+
+    pub fn recent_items(&self, limit: usize) -> Vec<ContinueListeningItem> {
+        if limit == 0 {
+            return Vec::new();
+        }
+
+        let data = match self.data.lock() {
+            Ok(data) => data,
+            Err(_) => return Vec::new(),
+        };
+
+        let mut unique = HashSet::new();
+        let mut result = Vec::with_capacity(limit);
+
+        for event in data.events.iter().rev() {
+            match event.source.as_ref().map(|source| source.kind.as_str()) {
+                Some("station") => continue,
+                Some("playlist") => {
+                    let Some(slug) = event
+                        .source
+                        .as_ref()
+                        .and_then(|source| source.id.as_deref())
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                        .map(|value| value.to_string())
+                    else {
+                        continue;
+                    };
+
+                    let unique_key = format!("playlist::{}", slug.to_lowercase());
+                    if !unique.insert(unique_key) {
+                        continue;
+                    }
+
+                    let name = event
+                        .source
+                        .as_ref()
+                        .and_then(|source| source.name.as_ref())
+                        .map(|value| value.trim())
+                        .filter(|value| !value.is_empty())
+                        .unwrap_or(&slug)
+                        .to_string();
+
+                    result.push(ContinueListeningItem::Playlist {
+                        playlist_slug: slug,
+                        playlist_name: name,
+                    });
+                }
+                _ => {
+                    let unique_key = format!("album::{}", event.path);
+                    if !unique.insert(unique_key) {
+                        continue;
+                    }
+                    result.push(ContinueListeningItem::Album {
+                        path: event.path.clone(),
+                    });
+                }
+            }
+
+            if result.len() >= limit {
+                break;
             }
         }
 
@@ -120,6 +210,35 @@ impl ListeningHistoryStore {
             .map(|(path, _, _)| path)
             .collect()
     }
+}
+
+fn normalize_source(source: ListeningSource) -> Option<ListeningSource> {
+    let kind = match source.kind.trim().to_lowercase().as_str() {
+        "album" => "album",
+        "playlist" => "playlist",
+        "station" => "station",
+        _ => "other",
+    }
+    .to_string();
+
+    let id = source
+        .id
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string());
+    let name = source
+        .name
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string());
+
+    if kind == "other" && id.is_none() && name.is_none() {
+        return None;
+    }
+
+    Some(ListeningSource { kind, id, name })
 }
 
 fn history_file_path() -> PathBuf {

@@ -1,6 +1,6 @@
 use crate::config::config::{load_config, save_config, Config};
 use crate::discord::rpc::DiscordRpcService;
-use crate::music::history::ListeningHistoryStore;
+use crate::music::history::{ContinueListeningItem, ListeningHistoryStore, ListeningSource};
 use crate::music::library::MusicLibrary;
 use crate::music::playback::{PlaybackService, PlaybackState};
 use crate::playlists::store::PlaylistStore;
@@ -32,13 +32,14 @@ pub fn reindex_music(state: State<MusicLibrary>) -> usize {
 #[tauri::command]
 pub fn playback_load_and_play(
     path: String,
+    source: Option<ListeningSource>,
     playback: State<PlaybackService>,
     library: State<MusicLibrary>,
     rpc: State<DiscordRpcService>,
     history: State<ListeningHistoryStore>,
 ) -> Result<PlaybackState, String> {
     let playback_state = playback.load_and_play(path.clone())?;
-    if let Err(error) = history.record_play(&path) {
+    if let Err(error) = history.record_play(&path, source) {
         eprintln!("Failed to persist listening history: {error}");
     }
     rpc.set_track(library.by_path(&path));
@@ -53,6 +54,7 @@ pub fn playback_load_and_play(
 #[derive(Serialize)]
 pub struct HomeInsights {
     pub continue_listening_paths: Vec<String>,
+    pub continue_listening_items: Vec<ContinueListeningItem>,
     pub most_played_week_paths: Vec<String>,
 }
 
@@ -60,6 +62,7 @@ pub struct HomeInsights {
 pub fn get_home_insights(history: State<ListeningHistoryStore>) -> HomeInsights {
     HomeInsights {
         continue_listening_paths: history.recent_paths(HOME_SECTION_LIMIT),
+        continue_listening_items: history.recent_items(HOME_SECTION_LIMIT),
         most_played_week_paths: history.most_played_week_paths(HOME_SECTION_LIMIT),
     }
 }
@@ -333,7 +336,9 @@ pub fn get_artist_images(artist_names: Vec<String>) -> Result<Vec<ArtistImage>, 
 }
 
 #[tauri::command]
-pub fn get_random_track(library: State<MusicLibrary>) -> Result<Option<crate::models::models::Song>, String> {
+pub fn get_random_track(
+    library: State<MusicLibrary>,
+) -> Result<Option<crate::models::models::Song>, String> {
     let lib = library.library.lock().map_err(|e| e.to_string())?;
     if lib.is_empty() {
         return Ok(None);

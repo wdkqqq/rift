@@ -18,6 +18,7 @@
         favoritesOpenRequest,
         listeningInsightsRefreshToken,
         playlistsRefreshToken,
+        type PlaybackSource,
         playbackIndex,
         playbackQueue,
         activeGenreStation,
@@ -60,11 +61,33 @@
     type HomeSectionId = "continue" | "recently-added" | "most-played-week";
 
     type HomeAlbumSection = {
-        id: HomeSectionId;
+        id: Exclude<HomeSectionId, "continue">;
         title: string;
         emptyText: string;
         albums: AlbumGroup[];
     };
+
+    type ContinueListeningInsightItem =
+        | { kind: "album"; path: string }
+        | {
+              kind: "playlist";
+              playlist_slug: string;
+              playlist_name: string;
+          };
+
+    type ContinueListeningCard =
+        | {
+              kind: "album";
+              key: string;
+              album: AlbumGroup;
+          }
+        | {
+              kind: "playlist";
+              key: string;
+              slug: string;
+              name: string;
+              tracks: SongWithCover[];
+          };
 
     type GenreStation = {
         id: string;
@@ -88,6 +111,7 @@
 
     type HomeInsights = {
         continue_listening_paths: string[];
+        continue_listening_items?: ContinueListeningInsightItem[];
         most_played_week_paths: string[];
     };
 
@@ -101,7 +125,7 @@
     const artistUrlCache = new Map<string, string>();
 
     let albums: AlbumGroup[] = [];
-    let continueListeningAlbums: AlbumGroup[] = [];
+    let continueListeningCards: ContinueListeningCard[] = [];
     let recentlyAddedAlbums: AlbumGroup[] = [];
     let mostPlayedWeekAlbums: AlbumGroup[] = [];
     let artists: ArtistGroup[] = [];
@@ -186,12 +210,6 @@
         visibleSongsCount = allSongs.length;
     }
     $: homeAlbumSections = [
-        {
-            id: "continue",
-            title: "Continue listening",
-            emptyText: "Start playback to build this section.",
-            albums: continueListeningAlbums,
-        },
         {
             id: "recently-added",
             title: "Recently added",
@@ -621,9 +639,57 @@
         return { albumsByKey, trackAlbumKeys };
     }
 
+    function buildContinueFallbackItems(
+        paths: string[],
+    ): ContinueListeningInsightItem[] {
+        return paths.map((path) => ({ kind: "album", path }));
+    }
+
+    function buildContinueListeningCards(
+        items: ContinueListeningInsightItem[],
+        trackAlbumKeys: Map<string, string>,
+        albumsByKey: Map<string, AlbumGroup>,
+    ): ContinueListeningCard[] {
+        const cards: ContinueListeningCard[] = [];
+        const seen = new Set<string>();
+
+        for (const item of items) {
+            if (item.kind === "album") {
+                const albumKey = trackAlbumKeys.get(item.path);
+                if (!albumKey || seen.has(`album::${albumKey}`)) continue;
+                const album = albumsByKey.get(albumKey);
+                if (!album) continue;
+                cards.push({
+                    kind: "album",
+                    key: `album::${album.key}`,
+                    album,
+                });
+                seen.add(`album::${album.key}`);
+            }
+
+            if (item.kind === "playlist") {
+                if (item.playlist_slug !== FAVORITES_SLUG) continue;
+                const key = `playlist::${item.playlist_slug}`;
+                if (seen.has(key)) continue;
+                cards.push({
+                    kind: "playlist",
+                    key,
+                    slug: item.playlist_slug,
+                    name: item.playlist_name || "Favorite Tracks",
+                    tracks: favoritesTracks,
+                });
+                seen.add(key);
+            }
+
+            if (cards.length >= HOME_SECTION_SIZE) break;
+        }
+
+        return cards;
+    }
+
     async function refreshListeningSections(albumGroups: AlbumGroup[]) {
         if (albumGroups.length === 0) {
-            continueListeningAlbums = [];
+            continueListeningCards = [];
             mostPlayedWeekAlbums = [];
             return;
         }
@@ -632,8 +698,15 @@
 
         try {
             const insights = await invoke<HomeInsights>("get_home_insights");
-            continueListeningAlbums = pickAlbumsByTrackPaths(
-                insights.continue_listening_paths,
+            const continueItems =
+                insights.continue_listening_items &&
+                insights.continue_listening_items.length > 0
+                    ? insights.continue_listening_items
+                    : buildContinueFallbackItems(
+                          insights.continue_listening_paths,
+                      );
+            continueListeningCards = buildContinueListeningCards(
+                continueItems,
                 trackAlbumKeys,
                 albumsByKey,
             );
@@ -643,7 +716,7 @@
                 albumsByKey,
             );
         } catch {
-            continueListeningAlbums = [];
+            continueListeningCards = [];
             mostPlayedWeekAlbums = [];
         }
     }
@@ -695,7 +768,7 @@
         } catch {
             albums = [];
             allSongs = [];
-            continueListeningAlbums = [];
+            continueListeningCards = [];
             recentlyAddedAlbums = [];
             mostPlayedWeekAlbums = [];
             artists = [];
@@ -719,12 +792,29 @@
         } catch {
             favoritesTracks = [];
         }
+        if (albums.length > 0) {
+            void refreshListeningSections(albums);
+        }
     }
 
     function openFavoriteTracks() {
         libraryMode = "home";
         activeAlbumId = null;
         activeLibraryView.set("detail");
+    }
+
+    function openContinuePlaylistCard(slug: string) {
+        if (slug === FAVORITES_SLUG) {
+            openFavoriteTracks();
+        }
+    }
+
+    async function toggleContinuePlaylistPlayback(
+        event: MouseEvent,
+        card: Extract<ContinueListeningCard, { kind: "playlist" }>,
+    ) {
+        if (card.slug !== FAVORITES_SLUG) return;
+        await toggleFavoritesPlayback(event);
     }
 
     function scrollLibraryRow(
@@ -793,6 +883,42 @@
         }
     }
 
+    function buildAlbumPlaybackSource(album: AlbumGroup): PlaybackSource {
+        return {
+            kind: "album",
+            id: album.key,
+            name: album.title,
+        };
+    }
+
+    function buildFavoritesPlaybackSource(): PlaybackSource {
+        return {
+            kind: "playlist",
+            id: FAVORITES_SLUG,
+            name: "Favorite Tracks",
+        };
+    }
+
+    function buildGenreStationPlaybackSource(
+        genreStation: GenreStation,
+    ): PlaybackSource {
+        return {
+            kind: "station",
+            id: genreStation.id,
+            name: genreStation.genre,
+        };
+    }
+
+    function buildCurrentListPlaybackSource(): PlaybackSource {
+        if (isSongsView) {
+            return { kind: "other" };
+        }
+        if (libraryMode === "album" && selectedAlbum) {
+            return buildAlbumPlaybackSource(selectedAlbum);
+        }
+        return buildFavoritesPlaybackSource();
+    }
+
     async function toggleAlbumPlayback(event: MouseEvent, album: AlbumGroup) {
         event.stopPropagation();
         if (album.tracks.length === 0) return;
@@ -814,10 +940,12 @@
 
         pausedTrackPath = null;
         activeGenreStation.set(null);
-        playTrack(0, album.tracks, album.key);
+        const source = buildAlbumPlaybackSource(album);
+        playTrack(0, album.tracks, album.key, source);
         await tick();
         await invoke("playback_load_and_play", {
             path: album.tracks[0].path,
+            source,
         });
     }
 
@@ -853,6 +981,7 @@
             duration: track.duration,
             coverUrl: track.coverUrl,
             path: track.path,
+            source: buildGenreStationPlaybackSource(genreStation),
         }));
 
         playbackQueue.set(queue);
@@ -862,8 +991,10 @@
         activeAlbumPlaybackKey = null;
 
         await tick();
+        const source = buildGenreStationPlaybackSource(genreStation);
         await invoke("playback_load_and_play", {
             path: shuffledTracks[0].path,
+            source,
         });
     }
 
@@ -888,10 +1019,12 @@
 
         pausedTrackPath = null;
         activeGenreStation.set(null);
-        playTrack(0, favoritesTracks, FAVORITES_SLUG);
+        const source = buildFavoritesPlaybackSource();
+        playTrack(0, favoritesTracks, FAVORITES_SLUG, source);
         await tick();
         await invoke("playback_load_and_play", {
             path: favoritesTracks[0].path,
+            source,
         });
     }
 
@@ -899,6 +1032,7 @@
         trackIndex: number,
         sourceTracks: SongWithCover[],
         albumKey: string | null = null,
+        source: PlaybackSource = { kind: "other" },
     ) {
         const queue = sourceTracks.map((track) => ({
             title: track.title,
@@ -907,6 +1041,7 @@
             duration: track.duration,
             coverUrl: track.coverUrl,
             path: track.path,
+            source,
         }));
 
         playbackQueue.set(queue);
@@ -1086,6 +1221,193 @@
             <div class="w-full space-y-10">
                 <div class="space-y-10" style={libraryContentStyle}>
                     {#if libraryMode === "home"}
+                        <section>
+                            <div class="mb-4 flex items-center justify-between">
+                                <h2 class="text-xl font-semibold">
+                                    Continue listening
+                                </h2>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                        aria-label="Scroll section left"
+                                        on:click={() =>
+                                            scrollLibraryRow("continue", -1)}
+                                    >
+                                        <ChevronLeft class="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
+                                        aria-label="Scroll section right"
+                                        on:click={() =>
+                                            scrollLibraryRow("continue", 1)}
+                                    >
+                                        <ChevronRight class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            {#if continueListeningCards.length === 0}
+                                <div class="px-1 py-2 text-sm text-secondary">
+                                    Start playback to build this section.
+                                </div>
+                            {:else}
+                                <div
+                                    bind:this={sectionRowElements.continue}
+                                    class="flex gap-4 overflow-x-auto pb-2 scrollbar-none -mx-6 px-6"
+                                >
+                                    {#each continueListeningCards as card (card.key)}
+                                        {#if card.kind === "album"}
+                                            <div
+                                                class="w-[180px] shrink-0 text-left group"
+                                                on:click={() =>
+                                                    openAlbum(card.album)}
+                                            >
+                                                <div
+                                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                                >
+                                                    {#if card.album.coverUrl}
+                                                        <img
+                                                            src={card.album
+                                                                .coverUrl}
+                                                            alt={card.album
+                                                                .title}
+                                                            class="w-full h-full object-cover"
+                                                        />
+                                                    {:else}
+                                                        <Music
+                                                            class="h-17 w-17 text-tertiary"
+                                                        />
+                                                    {/if}
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                    ></div>
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                            aria-label={activeAlbumPlaybackKey ===
+                                                                card.album
+                                                                    .key &&
+                                                            !activeAlbumPlaybackPaused
+                                                                ? "Pause album"
+                                                                : "Play album"}
+                                                            on:click={(event) =>
+                                                                toggleAlbumPlayback(
+                                                                    event,
+                                                                    card.album,
+                                                                )}
+                                                        >
+                                                            {#if activeAlbumPlaybackKey === card.album.key && !activeAlbumPlaybackPaused}
+                                                                <span
+                                                                    class="flex items-center gap-[3px]"
+                                                                >
+                                                                    <span
+                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    ></span>
+                                                                    <span
+                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    ></span>
+                                                                </span>
+                                                            {:else}
+                                                                <span
+                                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
+                                                                ></span>
+                                                            {/if}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p
+                                                    class="text-sm font-medium text-white truncate"
+                                                    title={card.album.title}
+                                                >
+                                                    {formatAlbumTitle(
+                                                        card.album.title,
+                                                    )}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-secondary truncate"
+                                                >
+                                                    {card.album.artist} • {card
+                                                        .album.tracks.length}
+                                                    tracks
+                                                </p>
+                                            </div>
+                                        {:else}
+                                            <button
+                                                type="button"
+                                                class="w-[180px] shrink-0 text-left group"
+                                                on:click={() =>
+                                                    openContinuePlaylistCard(
+                                                        card.slug,
+                                                    )}
+                                            >
+                                                <div
+                                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                                >
+                                                    <Heart
+                                                        fill="currentColor"
+                                                        class="h-17 w-17 text-tertiary"
+                                                    />
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                    ></div>
+                                                    <div
+                                                        class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                            aria-label={activeAlbumPlaybackKey ===
+                                                                card.slug &&
+                                                            !activeAlbumPlaybackPaused
+                                                                ? "Pause playlist"
+                                                                : "Play playlist"}
+                                                            on:click={(event) =>
+                                                                toggleContinuePlaylistPlayback(
+                                                                    event,
+                                                                    card,
+                                                                )}
+                                                        >
+                                                            {#if activeAlbumPlaybackKey === card.slug && !activeAlbumPlaybackPaused}
+                                                                <span
+                                                                    class="flex items-center gap-[3px]"
+                                                                >
+                                                                    <span
+                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    ></span>
+                                                                    <span
+                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
+                                                                    ></span>
+                                                                </span>
+                                                            {:else}
+                                                                <span
+                                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
+                                                                ></span>
+                                                            {/if}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <p
+                                                    class="text-sm font-medium text-white truncate"
+                                                >
+                                                    {card.name}
+                                                </p>
+                                                <p
+                                                    class="text-xs text-secondary truncate"
+                                                >
+                                                    Playlist • {card.tracks
+                                                        .length} songs
+                                                </p>
+                                            </button>
+                                        {/if}
+                                    {/each}
+                                </div>
+                            {/if}
+                        </section>
+
                         {#each homeAlbumSections as section (section.id)}
                             <section>
                                 <div
@@ -1480,14 +1802,19 @@
                                                             return;
                                                         }
                                                         pausedTrackPath = null;
+                                                        const source =
+                                                            buildCurrentListPlaybackSource();
                                                         playTrack(
                                                             index,
                                                             playbackSourceTracks,
+                                                            null,
+                                                            source,
                                                         );
                                                         void invoke(
                                                             "playback_load_and_play",
                                                             {
                                                                 path: song.path,
+                                                                source,
                                                             },
                                                         );
                                                     }}
@@ -1775,14 +2102,19 @@
                                                             return;
                                                         }
                                                         pausedTrackPath = null;
+                                                        const source =
+                                                            buildCurrentListPlaybackSource();
                                                         playTrack(
                                                             index,
                                                             playbackSourceTracks,
+                                                            null,
+                                                            source,
                                                         );
                                                         void invoke(
                                                             "playback_load_and_play",
                                                             {
                                                                 path: song.path,
+                                                                source,
                                                             },
                                                         );
                                                     }}

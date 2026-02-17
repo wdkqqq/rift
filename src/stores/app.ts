@@ -17,6 +17,14 @@ export const albumOpenRequest = writable<{
 
 export const activeGenreStation = writable<string | null>(null);
 
+export type PlaybackSourceKind = "album" | "playlist" | "station" | "other";
+
+export type PlaybackSource = {
+  kind: PlaybackSourceKind;
+  id?: string | null;
+  name?: string | null;
+};
+
 export type PlayerTrack = {
   title: string;
   subtitle: string;
@@ -24,6 +32,7 @@ export type PlayerTrack = {
   duration: string;
   coverUrl: string | null;
   path: string;
+  source?: PlaybackSource;
 };
 
 export const playbackQueue = writable<PlayerTrack[]>([]);

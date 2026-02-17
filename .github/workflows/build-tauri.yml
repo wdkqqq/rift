@@ -56,6 +56,7 @@ jobs:
             patchelf
 
       - name: Install JS dependencies
+        shell: bash
         run: |
           if [[ "$GITHUB_ACTOR" == "dependabot[bot]" ]]; then
             bun install

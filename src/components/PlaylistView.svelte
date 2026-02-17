@@ -526,6 +526,7 @@
                 .filter((g) => g.length > 0);
 
             for (const genre of genres) {
+                if (genre.length > 16) continue;
                 const genreLower = genre.toLowerCase();
                 const existing = genreAlbumMap.get(genreLower);
                 if (existing) {

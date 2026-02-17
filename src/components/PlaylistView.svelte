@@ -1366,20 +1366,17 @@
                                                                 )}
                                                         >
                                                             {#if activeAlbumPlaybackKey === card.album.key && !activeAlbumPlaybackPaused}
-                                                                <span
-                                                                    class="flex items-center gap-[3px]"
-                                                                >
-                                                                    <span
-                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                    ></span>
-                                                                    <span
-                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                    ></span>
-                                                                </span>
+                                                                <Pause
+                                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                                    fill="currentColor"
+                                                                    stroke="none"
+                                                                />
                                                             {:else}
-                                                                <span
-                                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
-                                                                ></span>
+                                                                <Play
+                                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                                    fill="currentColor"
+                                                                    stroke="none"
+                                                                />
                                                             {/if}
                                                         </button>
                                                     </div>
@@ -1437,20 +1434,17 @@
                                                                 )}
                                                         >
                                                             {#if activeAlbumPlaybackKey === card.slug && !activeAlbumPlaybackPaused}
-                                                                <span
-                                                                    class="flex items-center gap-[3px]"
-                                                                >
-                                                                    <span
-                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                    ></span>
-                                                                    <span
-                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                    ></span>
-                                                                </span>
+                                                                <Pause
+                                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                                    fill="currentColor"
+                                                                    stroke="none"
+                                                                />
                                                             {:else}
-                                                                <span
-                                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
-                                                                ></span>
+                                                                <Play
+                                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                                    fill="currentColor"
+                                                                    stroke="none"
+                                                                />
                                                             {/if}
                                                         </button>
                                                     </div>
@@ -1559,20 +1553,17 @@
                                                                 )}
                                                         >
                                                             {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
-                                                                <span
-                                                                    class="flex items-center gap-[3px]"
-                                                                >
-                                                                    <span
-                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                    ></span>
-                                                                    <span
-                                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                                    ></span>
-                                                                </span>
+                                                                <Pause
+                                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                                    fill="currentColor"
+                                                                    stroke="none"
+                                                                />
                                                             {:else}
-                                                                <span
-                                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
-                                                                ></span>
+                                                                <Play
+                                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                                    fill="currentColor"
+                                                                    stroke="none"
+                                                                />
                                                             {/if}
                                                         </button>
                                                     </div>
@@ -2335,20 +2326,17 @@
                                                         )}
                                                 >
                                                     {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
-                                                        <span
-                                                            class="flex items-center gap-[3px]"
-                                                        >
-                                                            <span
-                                                                class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                            ></span>
-                                                            <span
-                                                                class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                            ></span>
-                                                        </span>
+                                                        <Pause
+                                                            class="h-5 w-5 text-[var(--color-background)]"
+                                                            fill="currentColor"
+                                                            stroke="none"
+                                                        />
                                                     {:else}
-                                                        <span
-                                                            class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
-                                                        ></span>
+                                                        <Play
+                                                            class="h-5 w-5 text-[var(--color-background)]"
+                                                            fill="currentColor"
+                                                            stroke="none"
+                                                        />
                                                     {/if}
                                                 </button>
                                             </div>
@@ -2403,20 +2391,17 @@
                                             on:click={toggleFavoritesPlayback}
                                         >
                                             {#if activeAlbumPlaybackKey === FAVORITES_SLUG && !activeAlbumPlaybackPaused}
-                                                <span
-                                                    class="flex items-center gap-[3px]"
-                                                >
-                                                    <span
-                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                    ></span>
-                                                    <span
-                                                        class="h-[12px] w-[4px] rounded-[1px] bg-black/70"
-                                                    ></span>
-                                                </span>
+                                                <Pause
+                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                    fill="currentColor"
+                                                    stroke="none"
+                                                />
                                             {:else}
-                                                <span
-                                                    class="ml-[2px] h-0 w-0 border-y-[7px] border-y-transparent border-l-[12px] border-l-black/70"
-                                                ></span>
+                                                <Play
+                                                    class="h-5 w-5 text-[var(--color-background)]"
+                                                    fill="currentColor"
+                                                    stroke="none"
+                                                />
                                             {/if}
                                         </button>
                                     </div>

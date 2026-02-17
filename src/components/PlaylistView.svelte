@@ -966,14 +966,14 @@
 
         if (isCurrentAlbum) {
             if (activeAlbumPlaybackPaused) {
-                activeAlbumPlaybackPaused = false;
                 await tick();
                 await invoke("playback_play");
+                playbackIsPlaying.set(true);
                 return;
             }
-            activeAlbumPlaybackPaused = true;
             await tick();
             await invoke("playback_pause");
+            playbackIsPlaying.set(false);
             return;
         }
 
@@ -1044,15 +1044,15 @@
         const isCurrentFavorites = activeAlbumPlaybackKey === FAVORITES_SLUG;
         if (isCurrentFavorites) {
             if (activeAlbumPlaybackPaused) {
-                activeAlbumPlaybackPaused = false;
                 await tick();
                 await invoke("playback_play");
+                playbackIsPlaying.set(true);
                 return;
             }
 
-            activeAlbumPlaybackPaused = true;
             await tick();
             await invoke("playback_pause");
+            playbackIsPlaying.set(false);
             return;
         }
 
@@ -1240,6 +1240,23 @@
     $: if ($listeningInsightsRefreshToken !== lastListeningInsightsToken) {
         lastListeningInsightsToken = $listeningInsightsRefreshToken;
         void refreshListeningSections(albums);
+    }
+
+    $: {
+        const currentSource = $playbackQueue[$playbackIndex]?.source;
+        if (currentSource?.kind === "album" && currentSource.id) {
+            activeAlbumPlaybackKey = currentSource.id;
+            activeAlbumPlaybackPaused = !$playbackIsPlaying;
+        } else if (
+            currentSource?.kind === "playlist" &&
+            currentSource.id === FAVORITES_SLUG
+        ) {
+            activeAlbumPlaybackKey = FAVORITES_SLUG;
+            activeAlbumPlaybackPaused = !$playbackIsPlaying;
+        } else {
+            activeAlbumPlaybackKey = null;
+            activeAlbumPlaybackPaused = true;
+        }
     }
 
     $: {

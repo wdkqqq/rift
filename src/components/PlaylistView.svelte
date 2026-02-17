@@ -121,7 +121,7 @@
     const HOME_SECTION_SIZE = 12;
     const ALBUM_NAME_MAX_CHARS = 28;
     const ALBUM_TITLE_MAX_CHARS = 28;
-    const HERO_TITLE_MAX_CHARS = 14;
+    const HERO_TITLE_MAX_CHARS = 16;
 
     const coverUrlCache = new Map<string, string>();
     const artistUrlCache = new Map<string, string>();

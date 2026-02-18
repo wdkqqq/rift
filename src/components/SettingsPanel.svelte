@@ -1,7 +1,8 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import { settingsPanelOpen, activeSettingsTab } from "../stores/app.ts";
-    import { onMount } from "svelte";
+    import { settingsPanelOpen, activeSettingsTab } from "../stores/app";
+    import { onMount, tick } from "svelte";
+
     type AppConfig = {
         volume_normalization: boolean;
         autoplay: boolean;
@@ -15,20 +16,22 @@
         dark_theme: boolean;
         native_decorations: boolean;
     };
+    type SettingsTab = "audio" | "privacy" | "appearance";
 
-    let volumeNormalizationEnabled = false;
-    let autoplayEnabled = true;
-    let crossfadeEnabled = false;
-    let gaplessPlaybackEnabled = true;
-    let normalizeByAlbumEnabled = false;
-    let discordRpcEnabled = true;
-    let onlineRequestsEnabled = true;
-    let autoUpdateEnabled = true;
-    let plausibleAnalyticsEnabled = true;
-    let darkThemeEnabled = true;
-    let nativeDecorationsEnabled = false;
+    let volumeNormalizationEnabled = $state(false);
+    let autoplayEnabled = $state(true);
+    let crossfadeEnabled = $state(false);
+    let gaplessPlaybackEnabled = $state(true);
+    let normalizeByAlbumEnabled = $state(false);
+    let discordRpcEnabled = $state(true);
+    let onlineRequestsEnabled = $state(true);
+    let autoUpdateEnabled = $state(true);
+    let plausibleAnalyticsEnabled = $state(true);
+    let darkThemeEnabled = $state(true);
+    let nativeDecorationsEnabled = $state(false);
 
-    let currentTab = $activeSettingsTab;
+    let currentTab = $state($activeSettingsTab as SettingsTab);
+    let contentTab = $state($activeSettingsTab as SettingsTab);
     let isAnimating = false;
     let isConfigReady = false;
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -82,52 +85,50 @@
         }, 120);
     }
 
-    function switchTab(tab) {
+    function switchTab(tab: SettingsTab) {
         if (isAnimating || tab === currentTab) return;
 
         isAnimating = true;
-        activeSettingsTab.set(tab);
+        currentTab = tab;
 
-        const currentContent = document.getElementById(`${currentTab}-content`);
+        const currentContent = document.getElementById(`${contentTab}-content`);
         if (currentContent) {
             currentContent.style.transform = "translateY(-20px)";
             currentContent.style.opacity = "0";
         }
 
         setTimeout(() => {
-            document
-                .querySelectorAll(".settings-tab")
-                .forEach((t) => t.classList.remove("active"));
-            document
-                .querySelectorAll(".settings-content")
-                .forEach((content) => {
-                    content.classList.remove("active");
-                    content.style.transform = "translateY(20px)";
-                    content.style.opacity = "0";
-                });
-
-            document
-                .querySelector(`[data-settings-tab="${tab}"]`)
-                .classList.add("active");
-
-            const newContent = document.getElementById(`${tab}-content`);
-            if (newContent) {
-                newContent.classList.add("active");
-                setTimeout(() => {
+            contentTab = tab;
+            void tick().then(() => {
+                const newContent = document.getElementById(`${tab}-content`);
+                if (!newContent) return;
+                newContent.style.transform = "translateY(20px)";
+                newContent.style.opacity = "0";
+                requestAnimationFrame(() => {
                     newContent.style.transform = "translateY(0)";
                     newContent.style.opacity = "1";
-                }, 50);
-            }
-
-            currentTab = tab;
+                });
+            });
+            activeSettingsTab.set(tab);
             isAnimating = false;
         }, 120);
     }
 
-    function handleTabClick(event) {
-        const tab = event.currentTarget.getAttribute("data-settings-tab");
+    function handleTabClick(event: MouseEvent) {
+        const target = event.currentTarget as HTMLElement | null;
+        const tab = target?.getAttribute(
+            "data-settings-tab",
+        ) as SettingsTab | null;
+        if (!tab) return;
         switchTab(tab);
     }
+
+    $effect(() => {
+        if (!isAnimating && $activeSettingsTab !== currentTab) {
+            currentTab = $activeSettingsTab as SettingsTab;
+            contentTab = $activeSettingsTab as SettingsTab;
+        }
+    });
 
     onMount(() => {
         void (async () => {
@@ -141,9 +142,7 @@
             }
         })();
 
-        const initialContent = document.getElementById(
-            `${$activeSettingsTab}-content`,
-        );
+        const initialContent = document.getElementById(`${contentTab}-content`);
         if (initialContent) {
             initialContent.classList.add("active");
             initialContent.style.transform = "translateY(0)";
@@ -172,32 +171,32 @@
             >
                 <div class="space-y-1">
                     <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg active {activeSettingsTab ===
+                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
                         'audio'
                             ? 'active bg-hover text-white'
                             : 'text-secondary hover:text-white hover:bg-hover'}"
                         data-settings-tab="audio"
-                        on:click={handleTabClick}
+                        onclick={handleTabClick}
                     >
                         <span>Audio</span>
                     </div>
                     <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {activeSettingsTab ===
+                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
                         'privacy'
                             ? 'active bg-hover text-white'
                             : 'text-secondary hover:text-white hover:bg-hover'}"
                         data-settings-tab="privacy"
-                        on:click={handleTabClick}
+                        onclick={handleTabClick}
                     >
                         <span>Privacy</span>
                     </div>
                     <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {activeSettingsTab ===
+                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
                         'appearance'
                             ? 'active bg-hover text-white'
                             : 'text-secondary hover:text-white hover:bg-hover'}"
                         data-settings-tab="appearance"
-                        on:click={handleTabClick}
+                        onclick={handleTabClick}
                     >
                         <span>Appearance</span>
                     </div>
@@ -207,7 +206,7 @@
             <div class="w-2/3 px-6 py-5 overflow-y-auto">
                 <!-- Audio Settings -->
                 <div
-                    class="settings-content {activeSettingsTab === 'audio'
+                    class="settings-content {contentTab === 'audio'
                         ? 'active'
                         : ''}"
                     id="audio-content"
@@ -240,7 +239,7 @@
                                         bind:checked={
                                             volumeNormalizationEnabled
                                         }
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -266,7 +265,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={autoplayEnabled}
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -292,7 +291,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={crossfadeEnabled}
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -318,7 +317,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={gaplessPlaybackEnabled}
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -342,7 +341,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={normalizeByAlbumEnabled}
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -353,7 +352,7 @@
 
                 <!-- Privacy Settings -->
                 <div
-                    class="settings-content {activeSettingsTab === 'privacy'
+                    class="settings-content {contentTab === 'privacy'
                         ? 'active'
                         : ''}"
                     id="privacy-content"
@@ -383,7 +382,7 @@
                                             type="checkbox"
                                             class="checkbox-input"
                                             bind:checked={discordRpcEnabled}
-                                            on:change={queuePersist}
+                                            onchange={queuePersist}
                                         />
                                         <span class="checkbox-slider"></span>
                                     </label>
@@ -419,7 +418,7 @@
                                                 bind:checked={
                                                     onlineRequestsEnabled
                                                 }
-                                                on:change={queuePersist}
+                                                onchange={queuePersist}
                                             />
                                             <span class="checkbox-slider"
                                             ></span>
@@ -450,7 +449,7 @@
                                                 class="checkbox-input"
                                                 bind:checked={autoUpdateEnabled}
                                                 disabled={!onlineRequestsEnabled}
-                                                on:change={queuePersist}
+                                                onchange={queuePersist}
                                             />
                                             <span class="checkbox-slider"
                                             ></span>
@@ -481,7 +480,7 @@
                                                     plausibleAnalyticsEnabled
                                                 }
                                                 disabled={!onlineRequestsEnabled}
-                                                on:change={queuePersist}
+                                                onchange={queuePersist}
                                             />
                                             <span class="checkbox-slider"
                                             ></span>
@@ -495,7 +494,7 @@
 
                 <!-- Appearance Settings -->
                 <div
-                    class="settings-content {activeSettingsTab === 'appearance'
+                    class="settings-content {contentTab === 'appearance'
                         ? 'active'
                         : ''}"
                     id="appearance-content"
@@ -526,7 +525,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={darkThemeEnabled}
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
@@ -549,7 +548,7 @@
                                         type="checkbox"
                                         class="checkbox-input"
                                         bind:checked={nativeDecorationsEnabled}
-                                        on:change={queuePersist}
+                                        onchange={queuePersist}
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>

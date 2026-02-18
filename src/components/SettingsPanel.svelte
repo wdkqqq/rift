@@ -1,9 +1,14 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import { settingsPanelOpen, activeSettingsTab } from "../stores/app";
+    import {
+        settingsPanelOpen,
+        activeSettingsTab,
+        onboardingOpen,
+    } from "../stores/app";
     import { onMount, tick } from "svelte";
 
     type AppConfig = {
+        onboarding_played: boolean;
         launch_at_startup: boolean;
         volume_normalization: boolean;
         autoplay: boolean;
@@ -19,6 +24,7 @@
     type SettingsTab = "general" | "audio" | "privacy" | "appearance";
 
     let launchAtStartupEnabled = $state(false);
+    let onboardingPlayed = $state(false);
     let volumeNormalizationEnabled = $state(false);
     let autoplayEnabled = $state(true);
     let crossfadeEnabled = $state(false);
@@ -38,6 +44,7 @@
 
     function buildConfig(): AppConfig {
         return {
+            onboarding_played: onboardingPlayed,
             launch_at_startup: launchAtStartupEnabled,
             volume_normalization: volumeNormalizationEnabled,
             autoplay: autoplayEnabled,
@@ -53,6 +60,7 @@
     }
 
     function applyConfig(config: AppConfig) {
+        onboardingPlayed = config.onboarding_played;
         launchAtStartupEnabled = config.launch_at_startup;
         volumeNormalizationEnabled = config.volume_normalization;
         autoplayEnabled = config.autoplay;
@@ -121,6 +129,10 @@
         ) as SettingsTab | null;
         if (!tab) return;
         switchTab(tab);
+    }
+
+    function openOnboarding() {
+        onboardingOpen.set(true);
     }
 
     $effect(() => {
@@ -253,7 +265,9 @@
                                 </label>
                             </div>
                         </div>
-                        <div class="setting-item px-4 py-4">
+                        <div
+                            class="setting-item px-4 py-4 border-b border-border"
+                        >
                             <div
                                 class="flex items-center justify-between gap-6"
                             >
@@ -276,6 +290,26 @@
                                     />
                                     <span class="checkbox-slider"></span>
                                 </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="mt-3 border border-border rounded-xl overflow-hidden"
+                    >
+                        <div class="setting-item px-4 py-4">
+                            <div
+                                class="flex items-center justify-between gap-4"
+                            >
+                                <p class="text-sm text-secondary">
+                                    Need a refresher?
+                                </p>
+                                <button
+                                    type="button"
+                                    class="text-sm text-secondary hover:text-white [transition:color_0.2s_ease]"
+                                    onclick={openOnboarding}
+                                >
+                                    Replay onboarding
+                                </button>
                             </div>
                         </div>
                     </div>

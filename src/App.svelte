@@ -1,15 +1,23 @@
 <script>
     import { onMount } from "svelte";
+    import { invoke } from "@tauri-apps/api/core";
     import { getCurrentWindow } from "@tauri-apps/api/window";
-    import { commandPaletteOpen, settingsPanelOpen } from "./stores/app.ts";
+    import {
+        commandPaletteOpen,
+        settingsPanelOpen,
+        onboardingOpen,
+    } from "./stores/app.ts";
 
     import "./main.css";
 
     import Sidebar from "./components/Sidebar.svelte";
     import CommandPalette from "./components/CommandPalette.svelte";
     import SettingsPanel from "./components/SettingsPanel.svelte";
+    import OnboardingOverlay from "./components/OnboardingOverlay.svelte";
     import PlaylistView from "./components/PlaylistView.svelte";
     import Player from "./components/Player.svelte";
+
+    /** @typedef {{ onboarding_played: boolean }} AppConfig */
 
     function isMacOS() {
         const userAgentDataPlatform = navigator.userAgentData?.platform ?? "";
@@ -33,6 +41,7 @@
         if (e.key === "Escape") {
             commandPaletteOpen.set(false);
             settingsPanelOpen.set(false);
+            onboardingOpen.set(false);
         }
     }
 
@@ -65,6 +74,18 @@
     let isMac = $state(false);
 
     onMount(() => {
+        void (async () => {
+            try {
+                /** @type {AppConfig} */
+                const config = await invoke("get_app_config");
+                if (!config.onboarding_played) {
+                    onboardingOpen.set(true);
+                }
+            } catch (error) {
+                console.error("Failed to load config on app startup:", error);
+            }
+        })();
+
         isMac = isMacOS();
         if (isMac) {
             document.body.classList.add("macos-traffic-lights");
@@ -87,6 +108,7 @@
     onclick={() => {
         commandPaletteOpen.set(false);
         settingsPanelOpen.set(false);
+        onboardingOpen.set(false);
     }}
 ></div>
 
@@ -126,4 +148,7 @@
 
     <CommandPalette />
     <SettingsPanel />
+    {#if $onboardingOpen}
+        <OnboardingOverlay />
+    {/if}
 </div>

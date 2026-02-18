@@ -141,6 +141,14 @@ pub fn set_app_config(config: Config, rpc: State<DiscordRpcService>) -> Config {
 }
 
 #[tauri::command]
+pub fn set_onboarding_played(played: bool) -> Config {
+    let mut config = load_config();
+    config.onboarding_played = played;
+    save_config(&config);
+    config
+}
+
+#[tauri::command]
 pub fn get_playlists(
     playlists: State<PlaylistStore>,
 ) -> Result<Vec<crate::models::models::Playlist>, String> {

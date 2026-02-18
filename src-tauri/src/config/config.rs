@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Config {
+    pub onboarding_played: bool,
     pub launch_at_startup: bool,
     pub volume_normalization: bool,
     pub autoplay: bool,
@@ -21,6 +22,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            onboarding_played: false,
             launch_at_startup: false,
             volume_normalization: false,
             autoplay: true,

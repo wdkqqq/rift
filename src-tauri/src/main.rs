@@ -53,6 +53,7 @@ fn main() {
             playback_get_state,
             get_app_config,
             set_app_config,
+            set_onboarding_played,
             get_playlists,
             get_playlist_tracks,
             add_track_to_playlist,

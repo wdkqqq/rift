@@ -43,11 +43,19 @@ npm install
 3. Run application
 
 ```zsh
-tauri run
+bun tauri dev
+# or
+pnpm tauri dev
+# or
+npm run tauri dev
 ```
 4. Build application
 ```zsh
-tauri build
+bun tauri build
+# or
+pnpm tauri build
+# or
+npm run tauri build
 ```
 ## Contributing
 

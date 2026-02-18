@@ -29,7 +29,7 @@
     <div class="flex flex-col w-full px-4 space-y-1">
         <!-- Library Button -->
         <div
-            on:click={openLibraryView}
+            onclick={openLibraryView}
             class="active:scale-90 [transition:all_0.2s_ease] group flex items-center space-x-3 p-1 rounded-lg hover:bg-hover"
             class:bg-hover={$activeLibraryView === "library"}
         >
@@ -48,7 +48,7 @@
 
         <!-- Search Button -->
         <div
-            on:click={openCommandPalette}
+            onclick={openCommandPalette}
             class="active:scale-90 [transition:all_0.2s_ease] group flex items-center space-x-3 p-1 rounded-lg hover:bg-hover"
         >
             <div class="w-10 h-10 flex items-center justify-center relative">
@@ -61,7 +61,7 @@
 
         <!-- Menu Button -->
         <div
-            on:click={openSongsView}
+            onclick={openSongsView}
             class="active:scale-90 [transition:all_0.2s_ease] group flex items-center space-x-3 p-1 rounded-lg hover:bg-hover"
             class:bg-hover={$activeLibraryView === "songs"}
         >
@@ -81,7 +81,7 @@
     <!-- Settings Button -->
     <div class="flex flex-col w-full px-4 space-y-5 pb-3">
         <div
-            on:click={openSettingsPanel}
+            onclick={openSettingsPanel}
             class="active:scale-90 [transition:all_0.2s_ease] group flex items-center space-x-3 p-1 rounded-lg hover:bg-hover"
         >
             <div class="w-10 h-10 flex items-center justify-center relative">

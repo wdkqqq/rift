@@ -62,7 +62,7 @@
         }
     }
 
-    let isMac = false;
+    let isMac = $state(false);
 
     onMount(() => {
         isMac = isMacOS();
@@ -84,29 +84,29 @@
     $settingsPanelOpen
         ? 'opacity-100 bg-black/50 pointer-events-auto'
         : 'opacity-0 bg-black/0 pointer-events-none'}"
-    on:click={() => {
+    onclick={() => {
         commandPaletteOpen.set(false);
         settingsPanelOpen.set(false);
     }}
-/>
+></div>
 
 <div
     class="app-shell bg-background text-white h-screen flex flex-col overflow-hidden"
 >
     {#if isMac}
-        <div class="window-decor-strip" on:mousedown={handleTopBarMouseDown}>
+        <div class="window-decor-strip" onmousedown={handleTopBarMouseDown}>
             <div class="window-nav-controls">
                 <button
                     type="button"
                     class="window-nav-button"
-                    on:click={goBack}
+                    onclick={goBack}
                 >
                     ←
                 </button>
                 <button
                     type="button"
                     class="window-nav-button"
-                    on:click={goForward}
+                    onclick={goForward}
                 >
                     →
                 </button>

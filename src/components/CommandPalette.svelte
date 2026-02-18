@@ -1,4 +1,6 @@
 <script>
+    import { run } from "svelte/legacy";
+
     import { onMount, tick } from "svelte";
     import {
         commandPaletteOpen,
@@ -9,37 +11,14 @@
     import { Search, Music, Loader, Disc3 } from "lucide-svelte";
     import { writable } from "svelte/store";
     import { invoke } from "@tauri-apps/api/core";
-    import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+    import { readFile } from "@tauri-apps/plugin-fs";
     import { appCacheDir } from "@tauri-apps/api/path";
 
-    let search = "";
+    let search = $state("");
     let items = writable([]);
     let isLoading = writable(false);
     let activeIndex = writable(-1);
-    let searchInput;
-
-    $: hasSearchText = search.length > 0;
-
-    $: if (search.length > 0) {
-        performSearch(search);
-    } else {
-        items.set([]);
-        activeIndex.set(-1);
-    }
-
-    $: if ($items.length > 0 && $activeIndex >= $items.length) {
-        activeIndex.set(0);
-    }
-
-    $: if ($items.length === 0) {
-        activeIndex.set(-1);
-    }
-
-    $: if ($commandPaletteOpen) {
-        void tick().then(() => {
-            searchInput?.focus();
-        });
-    }
+    let searchInput = $state();
 
     async function getCoverUrl(coverFilename) {
         if (!coverFilename) return null;
@@ -47,11 +26,7 @@
         try {
             const cacheDir = await appCacheDir();
             const path = `${cacheDir}/covers/${coverFilename}`;
-
-            const data = await readFile(path, {
-                dir: BaseDirectory.Cache,
-                encoding: null,
-            });
+            const data = await readFile(path);
 
             const blob = new Blob([data]);
             return URL.createObjectURL(blob);
@@ -234,6 +209,32 @@
         window.addEventListener("keydown", handleKeydown);
         return () => window.removeEventListener("keydown", handleKeydown);
     });
+    let hasSearchText = $derived(search.length > 0);
+    run(() => {
+        if (search.length > 0) {
+            performSearch(search);
+        } else {
+            items.set([]);
+            activeIndex.set(-1);
+        }
+    });
+    run(() => {
+        if ($items.length > 0 && $activeIndex >= $items.length) {
+            activeIndex.set(0);
+        }
+    });
+    run(() => {
+        if ($items.length === 0) {
+            activeIndex.set(-1);
+        }
+    });
+    run(() => {
+        if ($commandPaletteOpen) {
+            void tick().then(() => {
+                searchInput?.focus();
+            });
+        }
+    });
 </script>
 
 <div
@@ -287,7 +288,7 @@
                         $activeIndex
                             ? 'bg-hover'
                             : ''}"
-                        on:click={() => selectItem(index)}
+                        onclick={() => selectItem(index)}
                     >
                         <div
                             class="w-10 h-10 bg-surface rounded mr-3 shrink-0 flex items-center justify-center overflow-hidden"

@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { run } from "svelte/legacy";
+
     import { invoke } from "@tauri-apps/api/core";
     import { onDestroy, onMount } from "svelte";
     import { cubicOut } from "svelte/easing";
@@ -38,45 +40,30 @@
         volume: number;
     };
 
-    let currentTime = 0;
-    let duration = 0;
-    let volume = 70;
-    let isPlaying = false;
-    let lastLoadedPath: string | null = null;
+    let currentTime = $state(0);
+    let duration = $state(0);
+    let volume = $state(70);
+    let isPlaying = $state(false);
+    let lastLoadedPath: string | null = $state(null);
     let pollTimer: ReturnType<typeof setInterval> | null = null;
-    let isSeeking = false;
-    let seekPreview = 0;
-    let sliderValue = 0;
+    let isSeeking = $state(false);
+    let seekPreview = $state(0);
+    let sliderValue = $state(0);
     let isAdvancing = false;
     let isSyncing = false;
-    let repeatMode: "off" | "all" | "one" = "off";
-    let playlistPopoverOpen = false;
-    let playlistSearch = "";
-    let playlistPopoverElement: HTMLDivElement | null = null;
-    let playlistMemberships = new Set<string>();
-    let membershipsLoadedForPath: string | null = null;
+    let repeatMode: "off" | "all" | "one" = $state("off");
+    let playlistPopoverOpen = $state(false);
+    let playlistSearch = $state("");
+    let playlistPopoverElement: HTMLDivElement | null = $state(null);
+    let playlistMemberships = $state(new Set<string>());
+    let membershipsLoadedForPath: string | null = $state(null);
 
     type Playlist = {
         slug: string;
         name: string;
     };
 
-    let playlists: Playlist[] = [];
-
-    $: currentTrack = $playbackQueue[$playbackIndex] ?? null;
-    $: progressPercent =
-        duration > 0 ? `${(sliderValue / duration) * 100}%` : "0%";
-    $: volumePercent = `${volume}%`;
-    $: effectiveCurrentTime = isSeeking ? seekPreview : currentTime;
-    $: filteredPlaylists = playlists.filter((playlist) =>
-        playlist.name
-            .toLowerCase()
-            .includes(playlistSearch.trim().toLowerCase()),
-    );
-
-    $: if (currentTrack?.path && currentTrack.path !== lastLoadedPath) {
-        void loadAndPlay(currentTrack.path);
-    }
+    let playlists: Playlist[] = $state([]);
 
     async function loadAndPlay(path: string) {
         try {
@@ -173,7 +160,6 @@
             return;
         }
 
-        // Queue ended and repeat is off - play random track
         void playRandomTrack();
     }
 
@@ -261,10 +247,6 @@
         } finally {
             isSeeking = false;
         }
-    }
-
-    $: if (!isSeeking) {
-        sliderValue = effectiveCurrentTime;
     }
 
     async function setVolume(event: Event) {
@@ -416,23 +398,48 @@
         };
     });
 
-    $: if (
-        currentTrack?.path &&
-        currentTrack.path !== membershipsLoadedForPath
-    ) {
-        membershipsLoadedForPath = currentTrack.path;
-        void loadTrackMemberships(currentTrack.path);
-    }
-
-    $: if (!currentTrack?.path) {
-        membershipsLoadedForPath = null;
-        playlistMemberships = new Set();
-    }
-
     onDestroy(() => {
         if (pollTimer) clearInterval(pollTimer);
         document.removeEventListener("mousedown", handleGlobalPointerDown);
         document.removeEventListener("keydown", handleGlobalKeydown);
+    });
+    let currentTrack = $derived($playbackQueue[$playbackIndex] ?? null);
+    let effectiveCurrentTime = $derived(isSeeking ? seekPreview : currentTime);
+    run(() => {
+        if (!isSeeking) {
+            sliderValue = effectiveCurrentTime;
+        }
+    });
+    let progressPercent = $derived(
+        duration > 0 ? `${(sliderValue / duration) * 100}%` : "0%",
+    );
+    let volumePercent = $derived(`${volume}%`);
+    let filteredPlaylists = $derived(
+        playlists.filter((playlist) =>
+            playlist.name
+                .toLowerCase()
+                .includes(playlistSearch.trim().toLowerCase()),
+        ),
+    );
+    run(() => {
+        if (currentTrack?.path && currentTrack.path !== lastLoadedPath) {
+            void loadAndPlay(currentTrack.path);
+        }
+    });
+    run(() => {
+        if (
+            currentTrack?.path &&
+            currentTrack.path !== membershipsLoadedForPath
+        ) {
+            membershipsLoadedForPath = currentTrack.path;
+            void loadTrackMemberships(currentTrack.path);
+        }
+    });
+    run(() => {
+        if (!currentTrack?.path) {
+            membershipsLoadedForPath = null;
+            playlistMemberships = new Set();
+        }
     });
 </script>
 
@@ -481,7 +488,7 @@
                             aria-label="Add to playlist"
                             aria-haspopup="menu"
                             aria-expanded={playlistPopoverOpen}
-                            on:click={togglePlaylistPopover}
+                            onclick={togglePlaylistPopover}
                         >
                             {#if playlistMemberships.size > 0}
                                 <span
@@ -531,7 +538,7 @@
                                                 aria-checked={playlistMemberships.has(
                                                     playlist.slug,
                                                 )}
-                                                on:click={() =>
+                                                onclick={() =>
                                                     handlePlaylistPick(
                                                         playlist,
                                                     )}
@@ -580,7 +587,7 @@
 
                 <button
                     class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
-                    on:click={playPrevious}
+                    onclick={playPrevious}
                     disabled={!currentTrack}
                 >
                     <SkipBack class="h-5 w-5" />
@@ -588,7 +595,7 @@
 
                 <button
                     class="text-[#818181] p-2 transition-colors [transition:all_0.2s_ease] hover:text-white disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
-                    on:click={togglePlayPause}
+                    onclick={togglePlayPause}
                     disabled={!currentTrack}
                 >
                     {#if isPlaying}
@@ -600,7 +607,7 @@
 
                 <button
                     class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
-                    on:click={playNext}
+                    onclick={playNext}
                     disabled={!currentTrack}
                 >
                     <SkipForward class="h-5 w-5" />
@@ -611,7 +618,7 @@
                     'off'
                         ? 'text-[#818181] hover:text-white'
                         : 'text-white'}"
-                    on:click={cycleRepeatMode}
+                    onclick={cycleRepeatMode}
                     disabled={!currentTrack}
                 >
                     {#if repeatMode === "one"}
@@ -646,8 +653,8 @@
                         max={duration > 0 ? duration : 0}
                         step="0.1"
                         bind:value={sliderValue}
-                        on:input={startSeek}
-                        on:change={commitSeek}
+                        oninput={startSeek}
+                        onchange={commitSeek}
                     />
                 </div>
                 <span class="w-10 shrink-0"
@@ -683,7 +690,7 @@
                     max="100"
                     step="1"
                     value={volume}
-                    on:input={setVolume}
+                    oninput={setVolume}
                 />
             </div>
         </div>

@@ -10,8 +10,8 @@
     } from "lucide-svelte";
     import { onDestroy, onMount, tick } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { readFile } from "@tauri-apps/plugin-fs";
     import { appCacheDir } from "@tauri-apps/api/path";
-    import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
     import {
         activeLibraryView,
         albumOpenRequest,
@@ -373,10 +373,7 @@
         try {
             const cacheDir = await appCacheDir();
             const path = `${cacheDir}/covers/${coverFilename}`;
-            const data = await readFile(path, {
-                dir: BaseDirectory.Cache,
-                encoding: null,
-            });
+            const data = await readFile(path);
             const blob = new Blob([data]);
             const url = URL.createObjectURL(blob);
             coverUrlCache.set(coverFilename, url);
@@ -396,10 +393,7 @@
         try {
             const cacheDir = await appCacheDir();
             const path = `${cacheDir}/artists/${imageFilename}`;
-            const data = await readFile(path, {
-                dir: BaseDirectory.Cache,
-                encoding: null,
-            });
+            const data = await readFile(path);
             const blob = new Blob([data]);
             const url = URL.createObjectURL(blob);
             artistUrlCache.set(imageFilename, url);
@@ -1176,6 +1170,12 @@
         );
     }
 
+    function handleCardKeydown(event: KeyboardEvent, action: () => void) {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        action();
+    }
+
     function handlePopState(event: PopStateEvent) {
         const state = event.state;
         if (
@@ -1295,7 +1295,7 @@
 
 <div
     bind:this={contentElement}
-    on:scroll={handleContentScroll}
+    onscroll={handleContentScroll}
     class="flex-1 min-w-0 w-full overflow-auto px-6 py-6"
 >
     <div class="playlist-view-switch" style={viewStyle}>
@@ -1313,7 +1313,7 @@
                                         type="button"
                                         class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                         aria-label="Scroll section left"
-                                        on:click={() =>
+                                        onclick={() =>
                                             scrollLibraryRow("continue", -1)}
                                     >
                                         <ChevronLeft class="h-4 w-4" />
@@ -1322,7 +1322,7 @@
                                         type="button"
                                         class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                         aria-label="Scroll section right"
-                                        on:click={() =>
+                                        onclick={() =>
                                             scrollLibraryRow("continue", 1)}
                                     >
                                         <ChevronRight class="h-4 w-4" />
@@ -1342,7 +1342,7 @@
                                         {#if card.kind === "album"}
                                             <div
                                                 class="w-[180px] shrink-0 text-left group"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     openAlbum(card.album)}
                                             >
                                                 <div
@@ -1376,7 +1376,7 @@
                                                             !activeAlbumPlaybackPaused
                                                                 ? "Pause album"
                                                                 : "Play album"}
-                                                            on:click={(event) =>
+                                                            onclick={(event) =>
                                                                 toggleAlbumPlayback(
                                                                     event,
                                                                     card.album,
@@ -1415,12 +1415,21 @@
                                                 </p>
                                             </div>
                                         {:else}
-                                            <button
-                                                type="button"
+                                            <div
+                                                role="button"
+                                                tabindex="0"
                                                 class="w-[180px] shrink-0 text-left group"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     openContinuePlaylistCard(
                                                         card.slug,
+                                                    )}
+                                                onkeydown={(event) =>
+                                                    handleCardKeydown(
+                                                        event,
+                                                        () =>
+                                                            openContinuePlaylistCard(
+                                                                card.slug,
+                                                            ),
                                                     )}
                                             >
                                                 <div
@@ -1444,7 +1453,7 @@
                                                             !activeAlbumPlaybackPaused
                                                                 ? "Pause playlist"
                                                                 : "Play playlist"}
-                                                            on:click={(event) =>
+                                                            onclick={(event) =>
                                                                 toggleContinuePlaylistPlayback(
                                                                     event,
                                                                     card,
@@ -1477,7 +1486,7 @@
                                                     Playlist • {card.tracks
                                                         .length} songs
                                                 </p>
-                                            </button>
+                                            </div>
                                         {/if}
                                     {/each}
                                 </div>
@@ -1497,7 +1506,7 @@
                                             type="button"
                                             class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                             aria-label="Scroll section left"
-                                            on:click={() =>
+                                            onclick={() =>
                                                 scrollLibraryRow(
                                                     section.id,
                                                     -1,
@@ -1509,7 +1518,7 @@
                                             type="button"
                                             class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                             aria-label="Scroll section right"
-                                            on:click={() =>
+                                            onclick={() =>
                                                 scrollLibraryRow(section.id, 1)}
                                         >
                                             <ChevronRight class="h-4 w-4" />
@@ -1532,8 +1541,7 @@
                                         {#each section.albums as album}
                                             <div
                                                 class="w-[180px] shrink-0 text-left group"
-                                                on:click={() =>
-                                                    openAlbum(album)}
+                                                onclick={() => openAlbum(album)}
                                             >
                                                 <div
                                                     class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
@@ -1563,7 +1571,7 @@
                                                             !activeAlbumPlaybackPaused
                                                                 ? "Pause album"
                                                                 : "Play album"}
-                                                            on:click={(event) =>
+                                                            onclick={(event) =>
                                                                 toggleAlbumPlayback(
                                                                     event,
                                                                     album,
@@ -1618,7 +1626,7 @@
                                                 type="button"
                                                 class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                                 aria-label="Scroll genre stations left"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     scrollGenreStations(-1)}
                                             >
                                                 <ChevronLeft class="h-4 w-4" />
@@ -1627,7 +1635,7 @@
                                                 type="button"
                                                 class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                                 aria-label="Scroll genre stations right"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     scrollGenreStations(1)}
                                             >
                                                 <ChevronRight class="h-4 w-4" />
@@ -1643,7 +1651,7 @@
                                                 class="w-[calc((100%-32px)/3)] shrink-0 h-[70px] rounded-xl {genreStation.color} flex items-center justify-center hover:brightness-90 active:scale-95 [transition:all_0.2s_ease] px-3"
                                                 role="button"
                                                 aria-label={`Play ${genreStation.genre} radio`}
-                                                on:click={(event) =>
+                                                onclick={(event) =>
                                                     toggleGenreStationPlayback(
                                                         event,
                                                         genreStation,
@@ -1696,7 +1704,7 @@
                                             type="button"
                                             class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                             aria-label="Scroll artists left"
-                                            on:click={() =>
+                                            onclick={() =>
                                                 scrollLibraryRow("artists", -1)}
                                         >
                                             <ChevronLeft class="h-4 w-4" />
@@ -1705,7 +1713,7 @@
                                             type="button"
                                             class="h-9 w-9 rounded-lg border border-border bg-surface text-secondary hover:text-white hover:bg-white/15 hover:border-white/60 active:scale-95 active:bg-white/20 flex items-center justify-center [transition:background-color_0.2s_ease,color_0.2s_ease,border-color_0.2s_ease,transform_0.1s_ease]"
                                             aria-label="Scroll artists right"
-                                            on:click={() =>
+                                            onclick={() =>
                                                 scrollLibraryRow("artists", 1)}
                                         >
                                             <ChevronRight class="h-4 w-4" />
@@ -1802,9 +1810,9 @@
                                 {#each selectedTracks as song, index (song.path)}
                                     <div
                                         class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
-                                        on:mouseenter={() =>
+                                        onmouseenter={() =>
                                             (hoveredTrackPath = song.path)}
-                                        on:mouseleave={() => {
+                                        onmouseleave={() => {
                                             if (
                                                 hoveredTrackPath === song.path
                                             ) {
@@ -1844,7 +1852,8 @@
                                                         song.path
                                                         ? "Pause track"
                                                         : "Play track"}
-                                                    on:click|stopPropagation={() => {
+                                                    onclick={(event) => {
+                                                        event.stopPropagation();
                                                         const isCurrent =
                                                             $playbackQueue[
                                                                 $playbackIndex
@@ -1939,9 +1948,9 @@
                                                 title={song.album}
                                                 role="button"
                                                 tabindex="0"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     openAlbumForSong(song)}
-                                                on:keydown={(event) => {
+                                                onkeydown={(event) => {
                                                     if (
                                                         event.key === "Enter" ||
                                                         event.key === " "
@@ -1982,7 +1991,7 @@
                                     "playlists"}
                                 class:text-secondary={songsLibraryTab !==
                                     "playlists"}
-                                on:click={() => setSongsLibraryTab("playlists")}
+                                onclick={() => setSongsLibraryTab("playlists")}
                             >
                                 Playlists
                             </button>
@@ -1993,7 +2002,7 @@
                                 class:text-white={songsLibraryTab === "albums"}
                                 class:text-secondary={songsLibraryTab !==
                                     "albums"}
-                                on:click={() => setSongsLibraryTab("albums")}
+                                onclick={() => setSongsLibraryTab("albums")}
                             >
                                 Albums
                             </button>
@@ -2004,7 +2013,7 @@
                                 class:text-white={songsLibraryTab === "tracks"}
                                 class:text-secondary={songsLibraryTab !==
                                     "tracks"}
-                                on:click={() => setSongsLibraryTab("tracks")}
+                                onclick={() => setSongsLibraryTab("tracks")}
                             >
                                 Tracks
                             </button>
@@ -2115,9 +2124,9 @@
                                 {#each selectedTracks as song, index (song.path)}
                                     <div
                                         class="grid grid-cols-12 gap-4 px-4 py-3 rounded-lg hover:bg-hover group [transition:all_0.1s_ease]"
-                                        on:mouseenter={() =>
+                                        onmouseenter={() =>
                                             (hoveredTrackPath = song.path)}
-                                        on:mouseleave={() => {
+                                        onmouseleave={() => {
                                             if (
                                                 hoveredTrackPath === song.path
                                             ) {
@@ -2157,7 +2166,8 @@
                                                         song.path
                                                         ? "Pause track"
                                                         : "Play track"}
-                                                    on:click|stopPropagation={() => {
+                                                    onclick={(event) => {
+                                                        event.stopPropagation();
                                                         const isCurrent =
                                                             $playbackQueue[
                                                                 $playbackIndex
@@ -2252,9 +2262,9 @@
                                                 title={song.album}
                                                 role="button"
                                                 tabindex="0"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     openAlbumForSong(song)}
-                                                on:keydown={(event) => {
+                                                onkeydown={(event) => {
                                                     if (
                                                         event.key === "Enter" ||
                                                         event.key === " "
@@ -2306,7 +2316,7 @@
                                 {#each albums as album}
                                     <div
                                         class="text-left group"
-                                        on:click={() => openAlbum(album)}
+                                        onclick={() => openAlbum(album)}
                                     >
                                         <div
                                             class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
@@ -2336,7 +2346,7 @@
                                                     !activeAlbumPlaybackPaused
                                                         ? "Pause album"
                                                         : "Play album"}
-                                                    on:click={(event) =>
+                                                    onclick={(event) =>
                                                         toggleAlbumPlayback(
                                                             event,
                                                             album,
@@ -2379,10 +2389,16 @@
                         <div
                             class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
                         >
-                            <button
-                                type="button"
+                            <div
+                                role="button"
+                                tabindex="0"
                                 class="text-left group"
-                                on:click={openFavoriteTracks}
+                                onclick={openFavoriteTracks}
+                                onkeydown={(event) =>
+                                    handleCardKeydown(
+                                        event,
+                                        openFavoriteTracks,
+                                    )}
                             >
                                 <div
                                     class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
@@ -2405,7 +2421,7 @@
                                             !activeAlbumPlaybackPaused
                                                 ? "Pause playlist"
                                                 : "Play playlist"}
-                                            on:click={toggleFavoritesPlayback}
+                                            onclick={toggleFavoritesPlayback}
                                         >
                                             {#if activeAlbumPlaybackKey === FAVORITES_SLUG && !activeAlbumPlaybackPaused}
                                                 <Pause
@@ -2431,7 +2447,7 @@
                                 <p class="text-xs text-secondary truncate">
                                     Playlist • {favoritesTracks.length} songs
                                 </p>
-                            </button>
+                            </div>
                         </div>
                     {/if}
                 </div>

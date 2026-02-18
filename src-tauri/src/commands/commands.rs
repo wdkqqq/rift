@@ -119,6 +119,11 @@ pub fn playback_set_volume(
 }
 
 #[tauri::command]
+pub fn playback_toggle_mute(state: State<PlaybackService>) -> Result<PlaybackState, String> {
+    state.toggle_mute()
+}
+
+#[tauri::command]
 pub fn playback_get_state(state: State<PlaybackService>) -> Result<PlaybackState, String> {
     state.get_state()
 }

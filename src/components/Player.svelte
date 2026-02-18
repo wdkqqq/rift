@@ -18,6 +18,7 @@
         Heart,
         Check,
         Volume2,
+        VolumeX,
     } from "lucide-svelte";
     import {
         notifyError,
@@ -38,11 +39,13 @@
         current_time: number;
         duration: number;
         volume: number;
+        is_muted: boolean;
     };
 
     let currentTime = $state(0);
     let duration = $state(0);
     let volume = $state(70);
+    let isMuted = $state(false);
     let isPlaying = $state(false);
     let lastLoadedPath: string | null = $state(null);
     let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -91,6 +94,7 @@
         currentTime = state.current_time || 0;
         duration = state.duration || 0;
         volume = Math.round((state.volume || 0) * 100);
+        isMuted = state.is_muted;
     }
 
     async function syncState() {
@@ -261,6 +265,15 @@
             applyState(state);
         } catch (error) {
             console.error("Failed to set volume:", error);
+        }
+    }
+
+    async function toggleMute() {
+        try {
+            const state = await invoke<PlaybackState>("playback_toggle_mute");
+            applyState(state);
+        } catch (error) {
+            console.error("Failed to toggle mute:", error);
         }
     }
 
@@ -667,9 +680,14 @@
 
         <div class="flex items-center justify-end space-x-3 w-1/3 pr-2">
             <button
-                class="text-secondary hover:text-white transition-colors active:scale-90 [transition:all_0.2s_ease]"
+                class="text-secondary hover:text-white transition-colors"
+                onclick={toggleMute}
             >
-                <Volume2 class="h-5 w-5" />
+                {#if isMuted}
+                    <VolumeX class="h-5 w-5" />
+                {:else}
+                    <Volume2 class="h-5 w-5" />
+                {/if}
             </button>
 
             <div

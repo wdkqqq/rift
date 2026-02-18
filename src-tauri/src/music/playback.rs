@@ -13,6 +13,7 @@ pub struct PlaybackState {
     pub current_time: f64,
     pub duration: f64,
     pub volume: f32,
+    pub is_muted: bool,
 }
 
 impl Default for PlaybackState {
@@ -23,6 +24,7 @@ impl Default for PlaybackState {
             current_time: 0.0,
             duration: 0.0,
             volume: 0.7,
+            is_muted: false,
         }
     }
 }
@@ -49,6 +51,9 @@ enum PlaybackCommand {
     },
     SetVolume {
         volume: f32,
+        reply: mpsc::Sender<Result<PlaybackState, String>>,
+    },
+    ToggleMute {
         reply: mpsc::Sender<Result<PlaybackState, String>>,
     },
     GetState {
@@ -83,6 +88,7 @@ impl PlaybackService {
                         position_seconds, ..
                     } => controller.seek(position_seconds),
                     PlaybackCommand::SetVolume { volume, .. } => Ok(controller.set_volume(volume)),
+                    PlaybackCommand::ToggleMute { .. } => Ok(controller.toggle_mute()),
                     PlaybackCommand::GetState { .. } => Ok(controller.state()),
                 };
 
@@ -173,6 +179,16 @@ impl PlaybackService {
                     .map_err(|_| "Playback state mutex is poisoned".to_string())
             })
     }
+
+    pub fn toggle_mute(&self) -> Result<PlaybackState, String> {
+        let (reply_tx, reply_rx) = mpsc::channel::<Result<PlaybackState, String>>();
+        self.tx
+            .send(PlaybackCommand::ToggleMute { reply: reply_tx })
+            .map_err(|_| "Playback service is unavailable".to_string())?;
+        reply_rx
+            .recv()
+            .map_err(|_| "Playback service did not respond".to_string())?
+    }
 }
 
 impl PlaybackCommand {
@@ -183,6 +199,7 @@ impl PlaybackCommand {
             PlaybackCommand::Pause { reply } => reply,
             PlaybackCommand::Seek { reply, .. } => reply,
             PlaybackCommand::SetVolume { reply, .. } => reply,
+            PlaybackCommand::ToggleMute { reply } => reply,
             PlaybackCommand::GetState { reply } => reply,
         }
     }
@@ -197,6 +214,7 @@ struct PlaybackController {
     position_offset: f64,
     paused: bool,
     volume: f32,
+    muted: bool,
 }
 
 impl PlaybackController {
@@ -215,6 +233,7 @@ impl PlaybackController {
             position_offset: 0.0,
             paused: true,
             volume: 0.7,
+            muted: false,
         })
     }
 
@@ -268,7 +287,13 @@ impl PlaybackController {
     fn set_volume(&mut self, volume: f32) -> PlaybackState {
         let clamped = volume.clamp(0.0, 1.0);
         self.volume = clamped;
-        self.sink.set_volume(clamped);
+        self.sink.set_volume(self.effective_volume());
+        self.state()
+    }
+
+    fn toggle_mute(&mut self) -> PlaybackState {
+        self.muted = !self.muted;
+        self.sink.set_volume(self.effective_volume());
         self.state()
     }
 
@@ -287,6 +312,7 @@ impl PlaybackController {
             current_time: self.position(),
             duration: self.duration,
             volume: self.volume,
+            is_muted: self.muted,
         }
     }
 
@@ -315,7 +341,7 @@ impl PlaybackController {
         self.sink.stop();
         self.sink = Sink::try_new(&self.handle)
             .map_err(|error| format!("Cannot recreate audio sink: {error}"))?;
-        self.sink.set_volume(self.volume);
+        self.sink.set_volume(self.effective_volume());
         self.sink
             .append(decoder.skip_duration(Duration::from_secs_f64(clamped_offset)));
 
@@ -340,6 +366,14 @@ impl PlaybackController {
             absolute.min(self.duration)
         } else {
             absolute
+        }
+    }
+
+    fn effective_volume(&self) -> f32 {
+        if self.muted {
+            0.0
+        } else {
+            self.volume
         }
     }
 }

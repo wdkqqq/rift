@@ -49,6 +49,7 @@ fn main() {
             playback_pause,
             playback_seek,
             playback_set_volume,
+            playback_toggle_mute,
             playback_get_state,
             get_app_config,
             set_app_config,

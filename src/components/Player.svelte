@@ -497,7 +497,7 @@
                     </div>
                     <div class="relative" bind:this={playlistPopoverElement}>
                         <button
-                            class="text-secondary hover:text-white transition-colors p-1 [transition:all_0.2s_ease]"
+                            class="p-1 transition-colors [transition:all_0.2s_ease] text-[#818181] hover:text-white"
                             aria-label="Add to playlist"
                             aria-haspopup="menu"
                             aria-expanded={playlistPopoverOpen}
@@ -505,14 +505,12 @@
                         >
                             {#if playlistMemberships.size > 0}
                                 <span
-                                    class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-hover)] text-[var(--color-text-secondary)]"
+                                    class="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-hover)] text-current"
                                 >
                                     <Check class="h-3 w-3" strokeWidth={3} />
                                 </span>
                             {:else}
-                                <PlusCircle
-                                    class="h-5 w-5 text-[var(--color-text-secondary)]"
-                                />
+                                <PlusCircle class="h-5 w-5 text-current" />
                             {/if}
                         </button>
 
@@ -680,7 +678,7 @@
 
         <div class="flex items-center justify-end space-x-3 w-1/3 pr-2">
             <button
-                class="text-secondary hover:text-white transition-colors"
+                class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease]"
                 onclick={toggleMute}
             >
                 {#if isMuted}

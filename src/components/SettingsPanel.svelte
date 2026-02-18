@@ -12,7 +12,6 @@
         discord_rpc: boolean;
         online_requests: boolean;
         automatic_updates: boolean;
-        plausible_analytics: boolean;
         dark_theme: boolean;
         native_decorations: boolean;
     };
@@ -26,7 +25,6 @@
     let discordRpcEnabled = $state(true);
     let onlineRequestsEnabled = $state(true);
     let autoUpdateEnabled = $state(true);
-    let plausibleAnalyticsEnabled = $state(true);
     let darkThemeEnabled = $state(true);
     let nativeDecorationsEnabled = $state(false);
 
@@ -46,7 +44,6 @@
             discord_rpc: discordRpcEnabled,
             online_requests: onlineRequestsEnabled,
             automatic_updates: autoUpdateEnabled,
-            plausible_analytics: plausibleAnalyticsEnabled,
             dark_theme: darkThemeEnabled,
             native_decorations: nativeDecorationsEnabled,
         };
@@ -61,7 +58,6 @@
         discordRpcEnabled = config.discord_rpc;
         onlineRequestsEnabled = config.online_requests;
         autoUpdateEnabled = config.automatic_updates;
-        plausibleAnalyticsEnabled = config.plausible_analytics;
         darkThemeEnabled = config.dark_theme;
         nativeDecorationsEnabled = config.native_decorations;
     }
@@ -448,37 +444,6 @@
                                                 type="checkbox"
                                                 class="checkbox-input"
                                                 bind:checked={autoUpdateEnabled}
-                                                disabled={!onlineRequestsEnabled}
-                                                onchange={queuePersist}
-                                            />
-                                            <span class="checkbox-slider"
-                                            ></span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="setting-item px-4 py-4">
-                                    <div
-                                        class="flex items-center justify-between gap-6"
-                                    >
-                                        <div class="flex-1 mr-6">
-                                            <p
-                                                class="font-medium text-white mb-1"
-                                            >
-                                                Usage Analytics
-                                            </p>
-                                            <p class="text-sm text-secondary">
-                                                Share anonymous traffic metrics
-                                                via Plausible
-                                            </p>
-                                        </div>
-                                        <label class="checkbox-container">
-                                            <input
-                                                type="checkbox"
-                                                class="checkbox-input"
-                                                bind:checked={
-                                                    plausibleAnalyticsEnabled
-                                                }
                                                 disabled={!onlineRequestsEnabled}
                                                 onchange={queuePersist}
                                             />

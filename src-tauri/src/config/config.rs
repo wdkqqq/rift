@@ -13,7 +13,6 @@ pub struct Config {
     pub discord_rpc: bool,
     pub online_requests: bool,
     pub automatic_updates: bool,
-    pub plausible_analytics: bool,
     pub dark_theme: bool,
     pub native_decorations: bool,
 }
@@ -29,7 +28,6 @@ impl Default for Config {
             discord_rpc: true,
             online_requests: true,
             automatic_updates: true,
-            plausible_analytics: true,
             dark_theme: true,
             native_decorations: false,
         }

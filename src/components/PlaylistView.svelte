@@ -107,6 +107,7 @@
         "bg-[#6B7B5B]",
         "bg-[#5B7B7B]",
     ];
+    const GENRE_COLOR_SIMILARITY_DISTANCE = 36;
 
     let genreStations: GenreStation[] = [];
 
@@ -550,26 +551,91 @@
 
             const displayGenre = genre.charAt(0).toUpperCase() + genre.slice(1);
 
-            const randomIndex = Math.floor(Math.random() * genreColors.length);
-            let color = genreColors[randomIndex];
-
-            for (const existing of result) {
-                if (existing.color === color) {
-                    color = genreColors[(randomIndex + 1) % genreColors.length];
-                }
-            }
-
             result.push({
                 id: `genre-${genre}`,
                 genre: displayGenre,
-                color,
+                color: genreColors[0],
                 tracks: data.tracks,
             });
 
             if (result.length >= 8) break;
         }
 
-        return result.sort((a, b) => b.tracks.length - a.tracks.length);
+        const sorted = result.sort((a, b) => b.tracks.length - a.tracks.length);
+        const usage = new Map<string, number>();
+
+        for (const color of genreColors) {
+            usage.set(color, 0);
+        }
+
+        let previousColor: string | null = null;
+
+        for (let i = 0; i < sorted.length; i++) {
+            const station = sorted[i];
+
+            let candidates = genreColors.filter((color) => {
+                if (!previousColor) return true;
+                if (color === previousColor) return false;
+                return !areGenreColorsSimilar(color, previousColor);
+            });
+
+            if (candidates.length === 0 && previousColor) {
+                candidates = genreColors.filter(
+                    (color) => color !== previousColor,
+                );
+            }
+
+            if (candidates.length === 0) {
+                candidates = [...genreColors];
+            }
+
+            const minUsage = Math.min(
+                ...candidates.map((color) => usage.get(color) ?? 0),
+            );
+            const leastUsed = candidates.filter(
+                (color) => (usage.get(color) ?? 0) === minUsage,
+            );
+            const pickIndex =
+                hashString(`${station.id}:${i}`) % leastUsed.length;
+            const selectedColor = leastUsed[pickIndex];
+
+            station.color = selectedColor;
+            usage.set(selectedColor, (usage.get(selectedColor) ?? 0) + 1);
+            previousColor = selectedColor;
+        }
+
+        return sorted;
+    }
+
+    function parseHexColorFromClass(
+        colorClass: string,
+    ): [number, number, number] | null {
+        const match = colorClass.match(/#([0-9a-fA-F]{6})/);
+        if (!match) return null;
+        const hex = match[1];
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return [r, g, b];
+    }
+
+    function areGenreColorsSimilar(aClass: string, bClass: string): boolean {
+        const a = parseHexColorFromClass(aClass);
+        const b = parseHexColorFromClass(bClass);
+        if (!a || !b) return aClass === bClass;
+        const dr = a[0] - b[0];
+        const dg = a[1] - b[1];
+        const db = a[2] - b[2];
+        const distance = Math.sqrt(dr * dr + dg * dg + db * db);
+        return distance < GENRE_COLOR_SIMILARITY_DISTANCE;
+    }
+
+    function hashString(value: string): number {
+        let hash = 0;
+        for (let i = 0; i < value.length; i++) {
+            hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+        }
+        return hash;
     }
 
     async function loadArtists(songs: SongWithCover[]) {

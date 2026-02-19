@@ -16,9 +16,7 @@ export const albumOpenRequest = writable<{
   artist: string;
 } | null>(null);
 
-export const activeGenreStation = writable<string | null>(null);
-
-export type PlaybackSourceKind = "album" | "playlist" | "station" | "other";
+export type PlaybackSourceKind = "album" | "playlist" | "other";
 
 export type PlaybackSource = {
   kind: PlaybackSourceKind;

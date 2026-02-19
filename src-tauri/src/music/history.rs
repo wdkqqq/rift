@@ -122,7 +122,6 @@ impl ListeningHistoryStore {
 
         for event in data.events.iter().rev() {
             match event.source.as_ref().map(|source| source.kind.as_str()) {
-                Some("station") => continue,
                 Some("playlist") => {
                     let Some(slug) = event
                         .source
@@ -216,7 +215,6 @@ fn normalize_source(source: ListeningSource) -> Option<ListeningSource> {
     let kind = match source.kind.trim().to_lowercase().as_str() {
         "album" => "album",
         "playlist" => "playlist",
-        "station" => "station",
         _ => "other",
     }
     .to_string();

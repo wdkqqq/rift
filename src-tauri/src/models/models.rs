@@ -10,7 +10,6 @@ pub struct Song {
     pub duration: String,
     pub cover: String,
     pub path: String,
-    pub genre: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

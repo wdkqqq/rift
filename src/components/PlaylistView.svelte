@@ -247,6 +247,12 @@
         return `${normalized.slice(0, HERO_TITLE_MAX_CHARS - 1)}...`;
     }
 
+    function playbackCutoutMaskId(scope: string, key: string): string {
+        const safeScope = scope.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+        const safeKey = key.toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+        return `playcut-mask-${safeScope}-${safeKey}`;
+    }
+
     function compareTracksForAlbum(a: SongWithCover, b: SongWithCover): number {
         const aTrackNumber =
             typeof a.track_number === "number" ? a.track_number : null;
@@ -1159,7 +1165,7 @@
                                                     openAlbum(card.album)}
                                             >
                                                 <div
-                                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                                    class="group/cover album-cover-hover-target relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                                 >
                                                     {#if card.album.coverUrl}
                                                         <img
@@ -1175,14 +1181,14 @@
                                                         />
                                                     {/if}
                                                     <div
-                                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                        class="album-cover-dim-overlay pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     ></div>
                                                     <div
                                                         class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     >
                                                         <button
                                                             type="button"
-                                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                            class="album-playcut-button pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full flex items-center justify-center"
                                                             aria-label={activeAlbumPlaybackKey ===
                                                                 card.album
                                                                     .key &&
@@ -1195,19 +1201,66 @@
                                                                     card.album,
                                                                 )}
                                                         >
-                                                            {#if activeAlbumPlaybackKey === card.album.key && !activeAlbumPlaybackPaused}
-                                                                <Pause
-                                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                                    fill="currentColor"
-                                                                    stroke="none"
+                                                            <svg
+                                                                class="album-playcut-svg h-12 w-12"
+                                                                viewBox="0 0 48 48"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <defs>
+                                                                    <mask
+                                                                        id={playbackCutoutMaskId(
+                                                                            "continue-album",
+                                                                            card.key,
+                                                                        )}
+                                                                    >
+                                                                        <rect
+                                                                            x="0"
+                                                                            y="0"
+                                                                            width="48"
+                                                                            height="48"
+                                                                            fill="white"
+                                                                        />
+                                                                        {#if activeAlbumPlaybackKey === card.album.key && !activeAlbumPlaybackPaused}
+                                                                            <g
+                                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                            >
+                                                                                <rect
+                                                                                    x="14"
+                                                                                    y="3"
+                                                                                    width="5"
+                                                                                    height="18"
+                                                                                    rx="1"
+                                                                                    fill="black"
+                                                                                />
+                                                                                <rect
+                                                                                    x="5"
+                                                                                    y="3"
+                                                                                    width="5"
+                                                                                    height="18"
+                                                                                    rx="1"
+                                                                                    fill="black"
+                                                                                />
+                                                                            </g>
+                                                                        {:else}
+                                                                            <path
+                                                                                d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                                fill="black"
+                                                                            />
+                                                                        {/if}
+                                                                    </mask>
+                                                                </defs>
+                                                                <circle
+                                                                    cx="24"
+                                                                    cy="24"
+                                                                    r="24"
+                                                                    fill="white"
+                                                                    mask={`url(#${playbackCutoutMaskId(
+                                                                        "continue-album",
+                                                                        card.key,
+                                                                    )})`}
                                                                 />
-                                                            {:else}
-                                                                <Play
-                                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                                    fill="currentColor"
-                                                                    stroke="none"
-                                                                />
-                                                            {/if}
+                                                            </svg>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1246,21 +1299,21 @@
                                                     )}
                                             >
                                                 <div
-                                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                                    class="group/cover album-cover-hover-target relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                                 >
                                                     <Heart
                                                         fill="currentColor"
                                                         class="h-17 w-17 text-tertiary"
                                                     />
                                                     <div
-                                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                        class="album-cover-dim-overlay pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     ></div>
                                                     <div
                                                         class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     >
                                                         <button
                                                             type="button"
-                                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                            class="album-playcut-button pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full flex items-center justify-center"
                                                             aria-label={activeAlbumPlaybackKey ===
                                                                 card.slug &&
                                                             !activeAlbumPlaybackPaused
@@ -1272,19 +1325,66 @@
                                                                     card,
                                                                 )}
                                                         >
-                                                            {#if activeAlbumPlaybackKey === card.slug && !activeAlbumPlaybackPaused}
-                                                                <Pause
-                                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                                    fill="currentColor"
-                                                                    stroke="none"
+                                                            <svg
+                                                                class="album-playcut-svg h-12 w-12"
+                                                                viewBox="0 0 48 48"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <defs>
+                                                                    <mask
+                                                                        id={playbackCutoutMaskId(
+                                                                            "continue-playlist",
+                                                                            card.slug,
+                                                                        )}
+                                                                    >
+                                                                        <rect
+                                                                            x="0"
+                                                                            y="0"
+                                                                            width="48"
+                                                                            height="48"
+                                                                            fill="white"
+                                                                        />
+                                                                        {#if activeAlbumPlaybackKey === card.slug && !activeAlbumPlaybackPaused}
+                                                                            <g
+                                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                            >
+                                                                                <rect
+                                                                                    x="14"
+                                                                                    y="3"
+                                                                                    width="5"
+                                                                                    height="18"
+                                                                                    rx="1"
+                                                                                    fill="black"
+                                                                                />
+                                                                                <rect
+                                                                                    x="5"
+                                                                                    y="3"
+                                                                                    width="5"
+                                                                                    height="18"
+                                                                                    rx="1"
+                                                                                    fill="black"
+                                                                                />
+                                                                            </g>
+                                                                        {:else}
+                                                                            <path
+                                                                                d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                                fill="black"
+                                                                            />
+                                                                        {/if}
+                                                                    </mask>
+                                                                </defs>
+                                                                <circle
+                                                                    cx="24"
+                                                                    cy="24"
+                                                                    r="24"
+                                                                    fill="white"
+                                                                    mask={`url(#${playbackCutoutMaskId(
+                                                                        "continue-playlist",
+                                                                        card.slug,
+                                                                    )})`}
                                                                 />
-                                                            {:else}
-                                                                <Play
-                                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                                    fill="currentColor"
-                                                                    stroke="none"
-                                                                />
-                                                            {/if}
+                                                            </svg>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1357,7 +1457,7 @@
                                                 onclick={() => openAlbum(album)}
                                             >
                                                 <div
-                                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                                    class="group/cover album-cover-hover-target relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                                 >
                                                     {#if album.coverUrl}
                                                         <img
@@ -1371,14 +1471,14 @@
                                                         />
                                                     {/if}
                                                     <div
-                                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                        class="album-cover-dim-overlay pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     ></div>
                                                     <div
                                                         class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                                     >
                                                         <button
                                                             type="button"
-                                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                            class="album-playcut-button pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full flex items-center justify-center"
                                                             aria-label={activeAlbumPlaybackKey ===
                                                                 album.key &&
                                                             !activeAlbumPlaybackPaused
@@ -1390,19 +1490,66 @@
                                                                     album,
                                                                 )}
                                                         >
-                                                            {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
-                                                                <Pause
-                                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                                    fill="currentColor"
-                                                                    stroke="none"
+                                                            <svg
+                                                                class="album-playcut-svg h-12 w-12"
+                                                                viewBox="0 0 48 48"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <defs>
+                                                                    <mask
+                                                                        id={playbackCutoutMaskId(
+                                                                            "home-section-album",
+                                                                            album.key,
+                                                                        )}
+                                                                    >
+                                                                        <rect
+                                                                            x="0"
+                                                                            y="0"
+                                                                            width="48"
+                                                                            height="48"
+                                                                            fill="white"
+                                                                        />
+                                                                        {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
+                                                                            <g
+                                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                            >
+                                                                                <rect
+                                                                                    x="14"
+                                                                                    y="3"
+                                                                                    width="5"
+                                                                                    height="18"
+                                                                                    rx="1"
+                                                                                    fill="black"
+                                                                                />
+                                                                                <rect
+                                                                                    x="5"
+                                                                                    y="3"
+                                                                                    width="5"
+                                                                                    height="18"
+                                                                                    rx="1"
+                                                                                    fill="black"
+                                                                                />
+                                                                            </g>
+                                                                        {:else}
+                                                                            <path
+                                                                                d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                                fill="black"
+                                                                            />
+                                                                        {/if}
+                                                                    </mask>
+                                                                </defs>
+                                                                <circle
+                                                                    cx="24"
+                                                                    cy="24"
+                                                                    r="24"
+                                                                    fill="white"
+                                                                    mask={`url(#${playbackCutoutMaskId(
+                                                                        "home-section-album",
+                                                                        album.key,
+                                                                    )})`}
                                                                 />
-                                                            {:else}
-                                                                <Play
-                                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                                    fill="currentColor"
-                                                                    stroke="none"
-                                                                />
-                                                            {/if}
+                                                            </svg>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -2055,7 +2202,7 @@
                                         onclick={() => openAlbum(album)}
                                     >
                                         <div
-                                            class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                            class="group/cover album-cover-hover-target relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                         >
                                             {#if album.coverUrl}
                                                 <img
@@ -2069,14 +2216,14 @@
                                                 />
                                             {/if}
                                             <div
-                                                class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                                class="album-cover-dim-overlay pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                             ></div>
                                             <div
                                                 class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                             >
                                                 <button
                                                     type="button"
-                                                    class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                                    class="album-playcut-button pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full flex items-center justify-center"
                                                     aria-label={activeAlbumPlaybackKey ===
                                                         album.key &&
                                                     !activeAlbumPlaybackPaused
@@ -2088,19 +2235,66 @@
                                                             album,
                                                         )}
                                                 >
-                                                    {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
-                                                        <Pause
-                                                            class="h-5 w-5 text-[var(--color-background)]"
-                                                            fill="currentColor"
-                                                            stroke="none"
+                                                    <svg
+                                                        class="album-playcut-svg h-12 w-12"
+                                                        viewBox="0 0 48 48"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <defs>
+                                                            <mask
+                                                                id={playbackCutoutMaskId(
+                                                                    "songs-tab-album",
+                                                                    album.key,
+                                                                )}
+                                                            >
+                                                                <rect
+                                                                    x="0"
+                                                                    y="0"
+                                                                    width="48"
+                                                                    height="48"
+                                                                    fill="white"
+                                                                />
+                                                                {#if activeAlbumPlaybackKey === album.key && !activeAlbumPlaybackPaused}
+                                                                    <g
+                                                                        transform="translate(14 14) scale(0.8333333333)"
+                                                                    >
+                                                                        <rect
+                                                                            x="14"
+                                                                            y="3"
+                                                                            width="5"
+                                                                            height="18"
+                                                                            rx="1"
+                                                                            fill="black"
+                                                                        />
+                                                                        <rect
+                                                                            x="5"
+                                                                            y="3"
+                                                                            width="5"
+                                                                            height="18"
+                                                                            rx="1"
+                                                                            fill="black"
+                                                                        />
+                                                                    </g>
+                                                                {:else}
+                                                                    <path
+                                                                        d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                                                                        transform="translate(14 14) scale(0.8333333333)"
+                                                                        fill="black"
+                                                                    />
+                                                                {/if}
+                                                            </mask>
+                                                        </defs>
+                                                        <circle
+                                                            cx="24"
+                                                            cy="24"
+                                                            r="24"
+                                                            fill="white"
+                                                            mask={`url(#${playbackCutoutMaskId(
+                                                                "songs-tab-album",
+                                                                album.key,
+                                                            )})`}
                                                         />
-                                                    {:else}
-                                                        <Play
-                                                            class="h-5 w-5 text-[var(--color-background)]"
-                                                            fill="currentColor"
-                                                            stroke="none"
-                                                        />
-                                                    {/if}
+                                                    </svg>
                                                 </button>
                                             </div>
                                         </div>
@@ -2137,21 +2331,21 @@
                                     )}
                             >
                                 <div
-                                    class="group/cover relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
+                                    class="group/cover album-cover-hover-target relative mb-2 w-full aspect-square rounded-xl bg-hover flex items-center justify-center overflow-hidden [transition:background-color_0.2s_ease]"
                                 >
                                     <Heart
                                         fill="currentColor"
                                         class="h-17 w-17 text-tertiary"
                                     />
                                     <div
-                                        class="pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
+                                        class="album-cover-dim-overlay pointer-events-none absolute inset-0 bg-black/55 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                     ></div>
                                     <div
                                         class="pointer-events-none absolute inset-0 opacity-0 [transition:opacity_0.2s_ease] group-hover/cover:opacity-100"
                                     >
                                         <button
                                             type="button"
-                                            class="pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full bg-white flex items-center justify-center"
+                                            class="album-playcut-button pointer-events-auto absolute left-3 bottom-3 h-12 w-12 rounded-full flex items-center justify-center"
                                             aria-label={activeAlbumPlaybackKey ===
                                                 FAVORITES_SLUG &&
                                             !activeAlbumPlaybackPaused
@@ -2159,19 +2353,66 @@
                                                 : "Play playlist"}
                                             onclick={toggleFavoritesPlayback}
                                         >
-                                            {#if activeAlbumPlaybackKey === FAVORITES_SLUG && !activeAlbumPlaybackPaused}
-                                                <Pause
-                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                    fill="currentColor"
-                                                    stroke="none"
+                                            <svg
+                                                class="album-playcut-svg h-12 w-12"
+                                                viewBox="0 0 48 48"
+                                                aria-hidden="true"
+                                            >
+                                                <defs>
+                                                    <mask
+                                                        id={playbackCutoutMaskId(
+                                                            "favorites",
+                                                            FAVORITES_SLUG,
+                                                        )}
+                                                    >
+                                                        <rect
+                                                            x="0"
+                                                            y="0"
+                                                            width="48"
+                                                            height="48"
+                                                            fill="white"
+                                                        />
+                                                        {#if activeAlbumPlaybackKey === FAVORITES_SLUG && !activeAlbumPlaybackPaused}
+                                                            <g
+                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                            >
+                                                                <rect
+                                                                    x="14"
+                                                                    y="3"
+                                                                    width="5"
+                                                                    height="18"
+                                                                    rx="1"
+                                                                    fill="black"
+                                                                />
+                                                                <rect
+                                                                    x="5"
+                                                                    y="3"
+                                                                    width="5"
+                                                                    height="18"
+                                                                    rx="1"
+                                                                    fill="black"
+                                                                />
+                                                            </g>
+                                                        {:else}
+                                                            <path
+                                                                d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"
+                                                                transform="translate(14 14) scale(0.8333333333)"
+                                                                fill="black"
+                                                            />
+                                                        {/if}
+                                                    </mask>
+                                                </defs>
+                                                <circle
+                                                    cx="24"
+                                                    cy="24"
+                                                    r="24"
+                                                    fill="white"
+                                                    mask={`url(#${playbackCutoutMaskId(
+                                                        "favorites",
+                                                        FAVORITES_SLUG,
+                                                    )})`}
                                                 />
-                                            {:else}
-                                                <Play
-                                                    class="h-5 w-5 text-[var(--color-background)]"
-                                                    fill="currentColor"
-                                                    stroke="none"
-                                                />
-                                            {/if}
+                                            </svg>
                                         </button>
                                     </div>
                                 </div>
@@ -2237,5 +2478,19 @@
 
     .scrollbar-none::-webkit-scrollbar {
         display: none;
+    }
+
+    .album-playcut-button {
+        background: transparent;
+        padding: 0;
+    }
+
+    .album-playcut-svg {
+        display: block;
+    }
+
+    .album-cover-dim-overlay {
+        -webkit-mask-image: none;
+        mask-image: none;
     }
 </style>

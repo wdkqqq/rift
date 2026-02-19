@@ -18,7 +18,7 @@ pub fn get_music_directory() -> PathBuf {
             }
             #[cfg(target_os = "linux")]
             {
-                PathBuf::from("/home/user/Music")
+                PathBuf::from("/var/lib/flatpak/exports/share/music")
             }
         })
 }

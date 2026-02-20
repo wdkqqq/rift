@@ -32,10 +32,22 @@
         const shouldOpenSearch =
             (e.metaKey && (key === "f" || key === "k")) ||
             (e.ctrlKey && (key === "f" || key === "k"));
+        const shouldGoBack = e.metaKey && key === "[";
+        const shouldGoForward = e.metaKey && key === "]";
 
         if (shouldOpenSearch) {
             e.preventDefault();
             commandPaletteOpen.set(true);
+        }
+
+        if (shouldGoBack) {
+            e.preventDefault();
+            goBack();
+        }
+
+        if (shouldGoForward) {
+            e.preventDefault();
+            goForward();
         }
 
         if (e.key === "Escape") {
@@ -118,20 +130,38 @@
     {#if isMac}
         <div class="window-decor-strip" onmousedown={handleTopBarMouseDown}>
             <div class="window-nav-controls">
-                <button
-                    type="button"
-                    class="window-nav-button"
-                    onclick={goBack}
-                >
-                    ←
-                </button>
-                <button
-                    type="button"
-                    class="window-nav-button"
-                    onclick={goForward}
-                >
-                    →
-                </button>
+                <div class="group relative">
+                    <button
+                        type="button"
+                        class="window-nav-button"
+                        aria-label="Back"
+                        onclick={goBack}
+                    >
+                        ←
+                    </button>
+                    <span
+                        class="pointer-events-none absolute top-full left-1/2 z-30 mt-2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md border border-divider bg-background px-2 py-1 text-xs text-white opacity-0 transition-all duration-200 group-hover:opacity-100"
+                    >
+                        <span>Back</span>
+                        <span class="text-secondary">⌘[</span>
+                    </span>
+                </div>
+                <div class="group relative">
+                    <button
+                        type="button"
+                        class="window-nav-button"
+                        aria-label="Forward"
+                        onclick={goForward}
+                    >
+                        →
+                    </button>
+                    <span
+                        class="pointer-events-none absolute top-full left-1/2 z-30 mt-2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md border border-divider bg-background px-2 py-1 text-xs text-white opacity-0 transition-all duration-200 group-hover:opacity-100"
+                    >
+                        <span>Forward</span>
+                        <span class="text-secondary">⌘]</span>
+                    </span>
+                </div>
             </div>
         </div>
     {/if}

@@ -123,7 +123,7 @@
         if (isAdvancing) return;
         if (state.is_playing) return;
         if (state.duration <= 0) return;
-        if (state.current_time < state.duration - 0.05) return;
+        if (state.current_time < state.duration - 1) return;
 
         if (repeatMode === "one" && currentTrack) {
             isAdvancing = true;

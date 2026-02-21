@@ -7,6 +7,53 @@ export const activeSettingsTab = writable("general");
 export const activeLibraryView = writable<"songs" | "library" | "detail">(
   "library",
 );
+
+export type RiftHistoryState =
+  | { riftView: "library-home" }
+  | { riftView: "songs" }
+  | { riftView: "detail-home" }
+  | { riftView: "detail-album"; albumId: string };
+
+export function isRiftHistoryState(value: unknown): value is RiftHistoryState {
+  if (!value || typeof value !== "object") return false;
+  const state = value as { riftView?: unknown; albumId?: unknown };
+
+  if (state.riftView === "library-home") return true;
+  if (state.riftView === "songs") return true;
+  if (state.riftView === "detail-home") return true;
+
+  return state.riftView === "detail-album" && typeof state.albumId === "string";
+}
+
+function sameRiftHistoryState(a: RiftHistoryState, b: RiftHistoryState) {
+  return a.riftView === b.riftView && a.albumId === b.albumId;
+}
+
+export function pushRiftHistoryState(state: RiftHistoryState) {
+  if (typeof window === "undefined") return;
+  const currentState = window.history.state;
+  if (
+    isRiftHistoryState(currentState) &&
+    sameRiftHistoryState(currentState, state)
+  ) {
+    return;
+  }
+
+  window.history.pushState(state, "");
+}
+
+export function ensureRiftHistoryState(state: RiftHistoryState) {
+  if (typeof window === "undefined") return;
+  const currentState = window.history.state;
+  if (
+    isRiftHistoryState(currentState) &&
+    sameRiftHistoryState(currentState, state)
+  ) {
+    return;
+  }
+
+  window.history.replaceState(state, "");
+}
 export const favoritesOpenRequest = writable(0);
 export const playlistsRefreshToken = writable(0);
 export const listeningInsightsRefreshToken = writable(0);

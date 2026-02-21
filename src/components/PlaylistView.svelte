@@ -15,10 +15,14 @@
     import {
         activeLibraryView,
         albumOpenRequest,
+        ensureRiftHistoryState,
         favoritesOpenRequest,
+        isRiftHistoryState,
         listeningInsightsRefreshToken,
         playlistsRefreshToken,
+        pushRiftHistoryState,
         type PlaybackSource,
+        type RiftHistoryState,
         playbackIndex,
         playbackIsPlaying,
         playbackQueue,
@@ -720,6 +724,7 @@
     }
 
     function openFavoriteTracks() {
+        pushRiftHistoryState({ riftView: "detail-home" });
         libraryMode = "home";
         activeAlbumId = null;
         activeLibraryView.set("detail");
@@ -755,10 +760,7 @@
     }
 
     function openAlbum(album: AlbumGroup) {
-        window.history.pushState(
-            { riftView: "library-album", albumId: album.key },
-            "",
-        );
+        pushRiftHistoryState({ riftView: "detail-album", albumId: album.key });
         animateLibraryModeSwitch("album", album.key);
         activeLibraryView.set("detail");
     }
@@ -1010,21 +1012,37 @@
         action();
     }
 
-    function handlePopState(event: PopStateEvent) {
-        const state = event.state;
-        if (
-            state?.riftView === "library-album" &&
-            typeof state.albumId === "string"
-        ) {
-            activeLibraryView.set("detail");
-            animateLibraryModeSwitch("album", state.albumId);
+    function applyHistoryState(state: RiftHistoryState) {
+        if (state.riftView === "songs") {
+            activeLibraryView.set("songs");
+            void animateLibraryModeSwitch("home", null);
             return;
         }
 
-        if (libraryMode === "album") {
+        if (state.riftView === "library-home") {
             activeLibraryView.set("library");
-            animateLibraryModeSwitch("home", null);
+            void animateLibraryModeSwitch("home", null);
+            return;
         }
+
+        if (state.riftView === "detail-home") {
+            activeLibraryView.set("detail");
+            void animateLibraryModeSwitch("home", null);
+            return;
+        }
+
+        activeLibraryView.set("detail");
+        void animateLibraryModeSwitch("album", state.albumId);
+    }
+
+    function handlePopState(event: PopStateEvent) {
+        const state = event.state;
+        if (isRiftHistoryState(state)) {
+            applyHistoryState(state);
+            return;
+        }
+
+        applyHistoryState({ riftView: "library-home" });
     }
 
     $: if ($activeLibraryView !== displayedView) {
@@ -1096,6 +1114,13 @@
     onMount(() => {
         loadAlbums();
         void loadFavoriteTracks();
+
+        if (isRiftHistoryState(window.history.state)) {
+            applyHistoryState(window.history.state);
+        } else {
+            ensureRiftHistoryState({ riftView: "library-home" });
+        }
+
         window.addEventListener("popstate", handlePopState);
     });
 

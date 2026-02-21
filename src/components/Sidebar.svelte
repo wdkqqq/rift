@@ -2,6 +2,7 @@
     import {
         activeLibraryView,
         commandPaletteOpen,
+        pushRiftHistoryState,
         settingsPanelOpen,
     } from "../stores/app";
     import { Search, House, Music, Settings } from "lucide-svelte";
@@ -24,10 +25,12 @@
     }
 
     function openLibraryView() {
+        pushRiftHistoryState({ riftView: "library-home" });
         activeLibraryView.set("library");
     }
 
     function openSongsView() {
+        pushRiftHistoryState({ riftView: "songs" });
         activeLibraryView.set("songs");
     }
 </script>

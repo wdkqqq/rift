@@ -140,7 +140,7 @@
                         ←
                     </button>
                     <span
-                        class="pointer-events-none absolute top-full left-1/2 z-30 mt-2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md border border-divider bg-background px-2 py-1 text-xs text-white opacity-0 transition-all duration-200 group-hover:opacity-100"
+                        class="pointer-events-none absolute top-full left-1/2 z-30 mt-2 inline-flex -translate-x-1/2 -translate-y-1 items-center gap-1 whitespace-nowrap rounded-md border border-divider bg-background px-2 py-1 text-xs text-white opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0"
                     >
                         <span>Back</span>
                         <span class="text-secondary">⌘[</span>
@@ -156,7 +156,7 @@
                         →
                     </button>
                     <span
-                        class="pointer-events-none absolute top-full left-1/2 z-30 mt-2 inline-flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-md border border-divider bg-background px-2 py-1 text-xs text-white opacity-0 transition-all duration-200 group-hover:opacity-100"
+                        class="pointer-events-none absolute top-full left-1/2 z-30 mt-2 inline-flex -translate-x-1/2 -translate-y-1 items-center gap-1 whitespace-nowrap rounded-md border border-divider bg-background px-2 py-1 text-xs text-white opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0"
                     >
                         <span>Forward</span>
                         <span class="text-secondary">⌘]</span>

@@ -5,7 +5,7 @@
         pushRiftHistoryState,
         settingsPanelOpen,
     } from "../stores/app";
-    import { Search, House, Music, Settings } from "lucide-svelte";
+    import { Search, House, ListMusic, Settings } from "lucide-svelte";
 
     const isMac =
         typeof navigator !== "undefined" &&
@@ -103,7 +103,7 @@
                     <div
                         class="absolute inset-0 rounded-lg bg-whit scale-125"
                     ></div>
-                    <Music
+                    <ListMusic
                         class="w-5 h-5 relative z-10 {$activeLibraryView ===
                         'songs'
                             ? 'text-white'

@@ -94,6 +94,15 @@ export type AppNotification = {
 };
 
 export const activeNotification = writable<AppNotification | null>(null);
+export type UpdateNotification = {
+  id: number;
+  title: string;
+  message: string;
+  actionLabel: string;
+};
+export const activeUpdateNotification = writable<UpdateNotification | null>(
+  null,
+);
 
 let notificationTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -132,6 +141,23 @@ export function notifySuccess(message: string, durationMs?: number) {
 
 export function notifyError(message: string, durationMs?: number) {
   showNotification(message, "error", durationMs);
+}
+
+export function showUpdateNotification(
+  title = "Update available",
+  message = "A new version of Rift is ready to install.",
+  actionLabel = "Restart to update",
+) {
+  activeUpdateNotification.set({
+    id: Date.now(),
+    title,
+    message,
+    actionLabel,
+  });
+}
+
+export function hideUpdateNotification() {
+  activeUpdateNotification.set(null);
 }
 
 export function refreshPlaylists() {

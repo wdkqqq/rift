@@ -2,10 +2,15 @@
     import { onMount } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { getCurrentWindow } from "@tauri-apps/api/window";
+    import { RefreshCw, X } from "lucide-svelte";
     import {
+        activeUpdateNotification,
         commandPaletteOpen,
+        hideUpdateNotification,
+        notifyInfo,
         settingsPanelOpen,
         onboardingOpen,
+        showUpdateNotification,
     } from "./stores/app.ts";
 
     import "./main.css";
@@ -83,6 +88,11 @@
         }
     }
 
+    function handleUpdateAction() {
+        hideUpdateNotification();
+        notifyInfo("Update restart flow is not connected yet.");
+    }
+
     let isMac = $state(false);
 
     onMount(() => {
@@ -102,6 +112,9 @@
         if (isMac) {
             document.body.classList.add("macos-traffic-lights");
         }
+
+        // TODO: Re-enable update notification once real auto-update flow is implemented.
+        // showUpdateNotification();
 
         document.addEventListener("keydown", handleKeydown);
 
@@ -180,5 +193,51 @@
     <SettingsPanel />
     {#if $onboardingOpen}
         <OnboardingOverlay />
+    {/if}
+
+    {#if $activeUpdateNotification}
+        <aside
+            class="fixed top-4 right-4 z-[60] w-[20.5rem] max-w-[calc(100vw-1.5rem)] rounded-xl border border-border bg-[#0f0f0f] p-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.35),0_2px_6px_rgba(0,0,0,0.24)]"
+            role="status"
+            aria-live="polite"
+        >
+            <div class="flex items-start justify-between gap-2.5">
+                <div class="flex min-w-0 items-start gap-2.5">
+                    <span
+                        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-hover text-[#d4d4d4]"
+                    >
+                        <RefreshCw class="h-3.5 w-3.5" />
+                    </span>
+                    <div class="min-w-0">
+                        <p
+                            class="text-[13px] font-semibold leading-5 text-white"
+                        >
+                            {$activeUpdateNotification.title}
+                        </p>
+                        <p class="mt-0.5 text-[12px] leading-4 text-secondary">
+                            {$activeUpdateNotification.message}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-secondary transition-colors duration-200 hover:bg-hover hover:text-white"
+                    aria-label="Close update notification"
+                    onclick={hideUpdateNotification}
+                >
+                    <X class="h-3.5 w-3.5" />
+                </button>
+            </div>
+
+            <div class="mt-3 flex items-center justify-end">
+                <button
+                    type="button"
+                    class="rounded-md bg-[#2a2a2a] px-3 py-1.5 text-[12px] font-medium text-white transition-[background-color,transform] duration-200 hover:bg-[#353535] active:translate-y-[0.5px] active:bg-[#3c3c3c]"
+                    onclick={handleUpdateAction}
+                >
+                    {$activeUpdateNotification.actionLabel}
+                </button>
+            </div>
+        </aside>
     {/if}
 </div>

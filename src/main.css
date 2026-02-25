@@ -212,3 +212,74 @@ body.macos-traffic-lights .app-shell {
 .relative {
     position: relative;
 }
+
+.library-tab-pill {
+    --library-pill-segment-width: 78px;
+    position: relative;
+    display: inline-flex;
+    align-items: stretch;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 9999px;
+    border: 1px solid #262626;
+    background: linear-gradient(180deg, #121212 0%, #0f0f0f 100%);
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.01);
+    isolation: isolate;
+}
+
+.library-tab-pill::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    height: calc(100% - 8px);
+    width: var(--library-pill-segment-width);
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #232323 0%, #1b1b1b 100%);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+    transform: translateX(
+        calc(
+            var(--library-pill-index, 0) *
+                (var(--library-pill-segment-width) + 4px)
+        )
+    );
+    transition:
+        transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+        background-color 180ms ease;
+    z-index: 0;
+}
+
+.library-tab-pill__item {
+    position: relative;
+    z-index: 1;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1;
+    width: var(--library-pill-segment-width);
+    padding: 0.45rem 0.75rem;
+    text-align: center;
+    transition:
+        color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.library-tab-pill__item:hover {
+    color: var(--color-text-primary);
+}
+
+.library-tab-pill__item:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.library-tab-pill__item--active {
+    color: var(--color-text-primary);
+}
+
+.library-tab-pill__item--active:hover {
+    color: var(--color-text-primary);
+}

@@ -940,6 +940,12 @@
         return 2;
     }
 
+    function getSongsTabVisualIndex(tab: SongsLibraryTab): number {
+        if (tab === "playlists") return 0;
+        if (tab === "albums") return 1;
+        return 2;
+    }
+
     function setSongsLibraryTab(nextTab: SongsLibraryTab) {
         if (songsLibraryTab === nextTab && displayedSongsLibraryTab === nextTab)
             return;
@@ -1900,38 +1906,39 @@
                     <div class="mb-6">
                         <h1 class="text-2xl font-semibold mb-4">Library</h1>
                         <div
-                            class="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1"
+                            class="library-tab-pill"
+                            role="tablist"
+                            style={`--library-pill-index: ${getSongsTabVisualIndex(songsLibraryTab)};`}
                         >
                             <button
                                 type="button"
-                                class="px-3 py-1.5 rounded-full text-sm [transition:all_0.2s_ease]"
-                                class:bg-card={songsLibraryTab === "playlists"}
-                                class:text-white={songsLibraryTab ===
+                                class="library-tab-pill__item"
+                                class:library-tab-pill__item--active={songsLibraryTab ===
                                     "playlists"}
-                                class:text-secondary={songsLibraryTab !==
-                                    "playlists"}
+                                role="tab"
+                                aria-selected={songsLibraryTab === "playlists"}
                                 onclick={() => setSongsLibraryTab("playlists")}
                             >
                                 Playlists
                             </button>
                             <button
                                 type="button"
-                                class="px-3 py-1.5 rounded-full text-sm [transition:all_0.2s_ease]"
-                                class:bg-card={songsLibraryTab === "albums"}
-                                class:text-white={songsLibraryTab === "albums"}
-                                class:text-secondary={songsLibraryTab !==
+                                class="library-tab-pill__item"
+                                class:library-tab-pill__item--active={songsLibraryTab ===
                                     "albums"}
+                                role="tab"
+                                aria-selected={songsLibraryTab === "albums"}
                                 onclick={() => setSongsLibraryTab("albums")}
                             >
                                 Albums
                             </button>
                             <button
                                 type="button"
-                                class="px-3 py-1.5 rounded-full text-sm [transition:all_0.2s_ease]"
-                                class:bg-card={songsLibraryTab === "tracks"}
-                                class:text-white={songsLibraryTab === "tracks"}
-                                class:text-secondary={songsLibraryTab !==
+                                class="library-tab-pill__item"
+                                class:library-tab-pill__item--active={songsLibraryTab ===
                                     "tracks"}
+                                role="tab"
+                                aria-selected={songsLibraryTab === "tracks"}
                                 onclick={() => setSongsLibraryTab("tracks")}
                             >
                                 Tracks

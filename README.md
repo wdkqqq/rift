@@ -11,10 +11,10 @@
         Enjoy your music without distractions, ads, or tracking.
     <br/>
     <br/>
-    <img src="/resources/screenshot-1.png"
+    <img src="/resources/screenshot-01.png"
         title="Interface Screenshot 1" alt="Screenshot 1" width="700" />
     <br/>
-    <img src="/resources/screenshot-2.png"
+    <img src="/resources/screenshot-02.png"
         title="Interface Screenshot 2" alt="Screenshot 2" width="700" />
 </div>
 

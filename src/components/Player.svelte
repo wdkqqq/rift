@@ -35,6 +35,7 @@
     type PlaybackState = {
         is_loaded: boolean;
         is_playing: boolean;
+        has_ended: boolean;
         current_time: number;
         duration: number;
         volume: number;
@@ -122,8 +123,7 @@
     function maybeAdvanceQueue(state: PlaybackState) {
         if (isAdvancing) return;
         if (state.is_playing) return;
-        if (state.duration <= 0) return;
-        if (state.current_time < state.duration - 1) return;
+        if (!state.has_ended) return;
 
         if (repeatMode === "one" && currentTrack) {
             isAdvancing = true;

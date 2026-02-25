@@ -10,6 +10,7 @@ use std::time::Duration;
 pub struct PlaybackState {
     pub is_loaded: bool,
     pub is_playing: bool,
+    pub has_ended: bool,
     pub current_time: f64,
     pub duration: f64,
     pub volume: f32,
@@ -21,6 +22,7 @@ impl Default for PlaybackState {
         Self {
             is_loaded: false,
             is_playing: false,
+            has_ended: false,
             current_time: 0.0,
             duration: 0.0,
             volume: 0.7,
@@ -298,17 +300,16 @@ impl PlaybackController {
     }
 
     fn state(&mut self) -> PlaybackState {
-        if !self.paused
-            && self.sink.empty()
-            && self.duration > 0.0
-            && self.position() >= self.duration
-        {
+        let has_ended = self.path.is_some() && self.sink.empty();
+
+        if !self.paused && has_ended {
             self.paused = true;
         }
 
         PlaybackState {
             is_loaded: self.path.is_some(),
             is_playing: self.path.is_some() && !self.paused,
+            has_ended,
             current_time: self.position(),
             duration: self.duration,
             volume: self.volume,

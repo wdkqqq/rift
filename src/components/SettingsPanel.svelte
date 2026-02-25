@@ -1,44 +1,30 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import {
-        settingsPanelOpen,
-        activeSettingsTab,
-        onboardingOpen,
-    } from "../stores/app";
-    import { onMount, tick } from "svelte";
+    import { onboardingOpen } from "../stores/app";
+    import { onMount } from "svelte";
 
     type AppConfig = {
         onboarding_played: boolean;
         launch_at_startup: boolean;
         volume_normalization: boolean;
         autoplay: boolean;
-        crossfade: boolean;
-        gapless_playback: boolean;
         normalize_by_album: boolean;
         discord_rpc: boolean;
         online_requests: boolean;
         automatic_updates: boolean;
-        dark_theme: boolean;
-        native_decorations: boolean;
+        server_url: string;
     };
-    type SettingsTab = "general" | "audio" | "privacy" | "appearance";
 
     let launchAtStartupEnabled = $state(false);
     let onboardingPlayed = $state(false);
     let volumeNormalizationEnabled = $state(false);
     let autoplayEnabled = $state(true);
-    let crossfadeEnabled = $state(false);
-    let gaplessPlaybackEnabled = $state(true);
     let normalizeByAlbumEnabled = $state(false);
     let discordRpcEnabled = $state(true);
     let onlineRequestsEnabled = $state(true);
     let autoUpdateEnabled = $state(true);
-    let darkThemeEnabled = $state(true);
-    let nativeDecorationsEnabled = $state(false);
+    let serverUrl = $state("https://example.com");
 
-    let currentTab = $state($activeSettingsTab as SettingsTab);
-    let contentTab = $state($activeSettingsTab as SettingsTab);
-    let isAnimating = false;
     let isConfigReady = false;
     let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -48,14 +34,11 @@
             launch_at_startup: launchAtStartupEnabled,
             volume_normalization: volumeNormalizationEnabled,
             autoplay: autoplayEnabled,
-            crossfade: crossfadeEnabled,
-            gapless_playback: gaplessPlaybackEnabled,
             normalize_by_album: normalizeByAlbumEnabled,
             discord_rpc: discordRpcEnabled,
             online_requests: onlineRequestsEnabled,
             automatic_updates: autoUpdateEnabled,
-            dark_theme: darkThemeEnabled,
-            native_decorations: nativeDecorationsEnabled,
+            server_url: serverUrl,
         };
     }
 
@@ -64,14 +47,11 @@
         launchAtStartupEnabled = config.launch_at_startup;
         volumeNormalizationEnabled = config.volume_normalization;
         autoplayEnabled = config.autoplay;
-        crossfadeEnabled = config.crossfade;
-        gaplessPlaybackEnabled = config.gapless_playback;
         normalizeByAlbumEnabled = config.normalize_by_album;
         discordRpcEnabled = config.discord_rpc;
         onlineRequestsEnabled = config.online_requests;
         autoUpdateEnabled = config.automatic_updates;
-        darkThemeEnabled = config.dark_theme;
-        nativeDecorationsEnabled = config.native_decorations;
+        serverUrl = config.server_url;
     }
 
     async function persistConfig() {
@@ -93,54 +73,9 @@
         }, 120);
     }
 
-    function switchTab(tab: SettingsTab) {
-        if (isAnimating || tab === currentTab) return;
-
-        isAnimating = true;
-        currentTab = tab;
-
-        const currentContent = document.getElementById(`${contentTab}-content`);
-        if (currentContent) {
-            currentContent.style.transform = "translateY(-20px)";
-            currentContent.style.opacity = "0";
-        }
-
-        setTimeout(() => {
-            contentTab = tab;
-            void tick().then(() => {
-                const newContent = document.getElementById(`${tab}-content`);
-                if (!newContent) return;
-                newContent.style.transform = "translateY(20px)";
-                newContent.style.opacity = "0";
-                requestAnimationFrame(() => {
-                    newContent.style.transform = "translateY(0)";
-                    newContent.style.opacity = "1";
-                });
-            });
-            activeSettingsTab.set(tab);
-            isAnimating = false;
-        }, 120);
-    }
-
-    function handleTabClick(event: MouseEvent) {
-        const target = event.currentTarget as HTMLElement | null;
-        const tab = target?.getAttribute(
-            "data-settings-tab",
-        ) as SettingsTab | null;
-        if (!tab) return;
-        switchTab(tab);
-    }
-
     function openOnboarding() {
         onboardingOpen.set(true);
     }
-
-    $effect(() => {
-        if (!isAnimating && $activeSettingsTab !== currentTab) {
-            currentTab = $activeSettingsTab as SettingsTab;
-            contentTab = $activeSettingsTab as SettingsTab;
-        }
-    });
 
     onMount(() => {
         void (async () => {
@@ -154,444 +89,254 @@
             }
         })();
 
-        const initialContent = document.getElementById(`${contentTab}-content`);
-        if (initialContent) {
-            initialContent.classList.add("active");
-            initialContent.style.transform = "translateY(0)";
-            initialContent.style.opacity = "1";
-        }
-
         return () => {
             if (saveTimer) clearTimeout(saveTimer);
         };
     });
 </script>
 
-<div
-    class="settings-panel fixed top-0 left-0 right-0 bottom-0 m-auto w-2/5 min-w-170 h-[28rem] bg-background border border-border rounded-2xl box-shadow z-50 duration-300 overflow-hidden {$settingsPanelOpen
-        ? 'active'
-        : ''}"
->
-    <div class="flex h-full flex-col">
-        <div class="px-6 py-4 border-b border-border">
-            <h2 class="text-base font-semibold text-white">Settings</h2>
-        </div>
-        <div class="flex flex-1 min-h-0">
-            <!-- Sidebar -->
+<div class="w-full">
+    <div class="pb-4">
+        <h1 class="text-2xl font-semibold text-white">Settings</h1>
+    </div>
+
+    <div class="w-full max-w-[760px] space-y-4 pb-8">
+        <section>
+            <p class="mb-2 text-sm text-secondary">General</p>
+            <div class="border border-border rounded-xl overflow-hidden">
+                <div class="setting-item px-4 py-3.5 border-b border-border">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Launch at Startup
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Start Rift automatically when you sign in
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={launchAtStartupEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item px-4 py-3.5 border-b border-border">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Automatic Updates
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Check and install app updates automatically
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={autoUpdateEnabled}
+                                disabled={!onlineRequestsEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <p class="mb-2 text-sm text-secondary">Audio</p>
+            <div class="border border-border rounded-xl overflow-hidden">
+                <div class="setting-item px-4 py-3.5 border-b border-border">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Volume Normalization
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Automatically adjust all tracks to consistent
+                                volume levels
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={volumeNormalizationEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item px-4 py-3.5 border-b border-border">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Autoplay
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Automatically play recommended tracks after
+                                queue ends
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={autoplayEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item px-4 py-3.5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Normalize by Album
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Keep volume differences inside albums while
+                                normalizing overall loudness
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={normalizeByAlbumEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <p class="mb-2 text-sm text-secondary">Privacy</p>
+            <div class="border border-border rounded-xl overflow-hidden">
+                <div class="setting-item px-4 py-3.5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Discord Rich Presence
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Share your listening activity on Discord profile
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={discordRpcEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <p class="mb-2 text-sm text-secondary">Network</p>
+            <div class="border border-border rounded-xl overflow-hidden">
+                <div class="setting-item px-4 py-3.5 border-b border-border">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Online Requests
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Allow the app to send requests to external
+                                servers
+                            </p>
+                        </div>
+                        <label class="checkbox-container">
+                            <input
+                                type="checkbox"
+                                class="checkbox-input"
+                                bind:checked={onlineRequestsEnabled}
+                                onchange={queuePersist}
+                            />
+                            <span class="checkbox-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-item px-4 py-3.5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1 mr-4">
+                            <p
+                                class="text-sm leading-5 font-medium text-white mb-1"
+                            >
+                                Server URL
+                            </p>
+                            <p class="text-sm leading-5 text-secondary">
+                                Do not change this unless you know what you are
+                                doing
+                            </p>
+                        </div>
+                        <input
+                            type="text"
+                            bind:value={serverUrl}
+                            oninput={queuePersist}
+                            class="h-9 w-64 rounded-lg border border-border bg-hover px-3 text-sm text-white placeholder-secondary outline-none"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <p class="mb-2 text-sm text-secondary">Support</p>
             <div
-                class="w-1/3 bg-background p-4 border-r border-border overflow-y-auto"
+                class="border border-border rounded-xl overflow-hidden bg-[#0d0d0d]"
             >
-                <div class="space-y-1">
-                    <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
-                        'general'
-                            ? 'active bg-hover text-white'
-                            : 'text-secondary hover:text-white hover:bg-hover'}"
-                        data-settings-tab="general"
-                        onclick={handleTabClick}
-                    >
-                        <span>General</span>
-                    </div>
-                    <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
-                        'audio'
-                            ? 'active bg-hover text-white'
-                            : 'text-secondary hover:text-white hover:bg-hover'}"
-                        data-settings-tab="audio"
-                        onclick={handleTabClick}
-                    >
-                        <span>Audio</span>
-                    </div>
-                    <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
-                        'privacy'
-                            ? 'active bg-hover text-white'
-                            : 'text-secondary hover:text-white hover:bg-hover'}"
-                        data-settings-tab="privacy"
-                        onclick={handleTabClick}
-                    >
-                        <span>Privacy</span>
-                    </div>
-                    <div
-                        class="active:scale-95 [transition:all_0.2s_ease] settings-tab flex items-center p-2.5 rounded-lg {currentTab ===
-                        'appearance'
-                            ? 'active bg-hover text-white'
-                            : 'text-secondary hover:text-white hover:bg-hover'}"
-                        data-settings-tab="appearance"
-                        onclick={handleTabClick}
-                    >
-                        <span>Appearance</span>
+                <div class="setting-item px-4 py-3.5">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-white">
+                                Onboarding
+                            </p>
+                            <p class="text-xs text-secondary">
+                                Replay onboarding and tips
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="h-8 rounded-md border border-border bg-hover px-3 text-xs text-white hover:bg-[#252525] [transition:background-color_0.2s_ease]"
+                            onclick={openOnboarding}
+                        >
+                            Replay
+                        </button>
                     </div>
                 </div>
             </div>
-            <!-- Content Area -->
-            <div class="w-2/3 px-6 py-5 overflow-y-auto">
-                <!-- General Settings -->
-                <div
-                    class="settings-content {contentTab === 'general'
-                        ? 'active'
-                        : ''}"
-                    id="general-content"
-                >
-                    <h3 class="text-sm font-semibold text-secondary mb-4">
-                        General
-                    </h3>
-                    <div
-                        class="border border-border rounded-xl overflow-hidden"
-                    >
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Launch at Startup
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Start Rift automatically when you sign
-                                        in
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={launchAtStartupEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Automatic Updates
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Check and install app updates
-                                        automatically
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={autoUpdateEnabled}
-                                        disabled={!onlineRequestsEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        class="mt-3 border border-border rounded-xl overflow-hidden"
-                    >
-                        <div class="setting-item px-4 py-4">
-                            <div
-                                class="flex items-center justify-between gap-4"
-                            >
-                                <p class="text-sm text-secondary">
-                                    Need a refresher?
-                                </p>
-                                <button
-                                    type="button"
-                                    class="text-sm text-secondary hover:text-white [transition:color_0.2s_ease]"
-                                    onclick={openOnboarding}
-                                >
-                                    Replay onboarding
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Audio Settings -->
-                <div
-                    class="settings-content {contentTab === 'audio'
-                        ? 'active'
-                        : ''}"
-                    id="audio-content"
-                >
-                    <h3 class="text-sm font-semibold text-secondary mb-4">
-                        Audio
-                    </h3>
-                    <div
-                        class="border border-border rounded-xl overflow-hidden"
-                    >
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Volume Normalization
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Automatically adjust all tracks to
-                                        consistent volume levels
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={
-                                            volumeNormalizationEnabled
-                                        }
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Autoplay
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Automatically play recommended tracks
-                                        after queue ends
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={autoplayEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Crossfade
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Smoothly blend track endings into the
-                                        next track
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={crossfadeEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Gapless Playback
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Remove silence between consecutive
-                                        tracks when possible
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={gaplessPlaybackEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="setting-item px-4 py-4">
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Normalize by Album
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Keep volume differences inside albums
-                                        while normalizing overall loudness
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={normalizeByAlbumEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Privacy Settings -->
-                <div
-                    class="settings-content {contentTab === 'privacy'
-                        ? 'active'
-                        : ''}"
-                    id="privacy-content"
-                >
-                    <h3 class="text-sm font-semibold text-secondary mb-4">
-                        Privacy
-                    </h3>
-                    <div
-                        class="border border-border rounded-xl overflow-hidden"
-                    >
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Discord Rich Presence
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Share your listening activity on Discord
-                                        profile
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={discordRpcEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="setting-item px-4 py-4">
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Online Requests
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Allow the app to send any requests to
-                                        external servers
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={onlineRequestsEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Appearance Settings -->
-                <div
-                    class="settings-content {contentTab === 'appearance'
-                        ? 'active'
-                        : ''}"
-                    id="appearance-content"
-                >
-                    <h3 class="text-sm font-semibold text-secondary mb-4">
-                        Appearance
-                    </h3>
-                    <div
-                        class="border border-border rounded-xl overflow-hidden"
-                    >
-                        <div
-                            class="setting-item px-4 py-4 border-b border-border"
-                        >
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Dark Theme
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Use dark color scheme throughout the
-                                        application
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={darkThemeEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                        <div class="setting-item px-4 py-4">
-                            <div
-                                class="flex items-center justify-between gap-6"
-                            >
-                                <div class="flex-1 mr-6">
-                                    <p class="font-medium text-white mb-1">
-                                        Native Decorations
-                                    </p>
-                                    <p class="text-sm text-secondary">
-                                        Use native window decorations
-                                    </p>
-                                </div>
-                                <label class="checkbox-container">
-                                    <input
-                                        type="checkbox"
-                                        class="checkbox-input"
-                                        bind:checked={nativeDecorationsEnabled}
-                                        onchange={queuePersist}
-                                    />
-                                    <span class="checkbox-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
     </div>
 </div>

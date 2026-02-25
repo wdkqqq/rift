@@ -1,16 +1,15 @@
 import { writable } from "svelte/store";
 
 export const commandPaletteOpen = writable(false);
-export const settingsPanelOpen = writable(false);
 export const onboardingOpen = writable(false);
-export const activeSettingsTab = writable("general");
-export const activeLibraryView = writable<"songs" | "library" | "detail">(
-  "library",
-);
+export const activeLibraryView = writable<
+  "songs" | "library" | "detail" | "settings"
+>("library");
 
 export type RiftHistoryState =
   | { riftView: "library-home" }
   | { riftView: "songs" }
+  | { riftView: "settings" }
   | { riftView: "detail-home" }
   | { riftView: "detail-album"; albumId: string };
 
@@ -20,6 +19,7 @@ export function isRiftHistoryState(value: unknown): value is RiftHistoryState {
 
   if (state.riftView === "library-home") return true;
   if (state.riftView === "songs") return true;
+  if (state.riftView === "settings") return true;
   if (state.riftView === "detail-home") return true;
 
   return state.riftView === "detail-album" && typeof state.albumId === "string";

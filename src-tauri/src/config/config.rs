@@ -9,14 +9,11 @@ pub struct Config {
     pub launch_at_startup: bool,
     pub volume_normalization: bool,
     pub autoplay: bool,
-    pub crossfade: bool,
-    pub gapless_playback: bool,
     pub normalize_by_album: bool,
     pub discord_rpc: bool,
     pub online_requests: bool,
     pub automatic_updates: bool,
-    pub dark_theme: bool,
-    pub native_decorations: bool,
+    pub server_url: String,
 }
 
 impl Default for Config {
@@ -26,14 +23,11 @@ impl Default for Config {
             launch_at_startup: false,
             volume_normalization: false,
             autoplay: true,
-            crossfade: false,
-            gapless_playback: true,
             normalize_by_album: false,
             discord_rpc: true,
             online_requests: true,
             automatic_updates: true,
-            dark_theme: true,
-            native_decorations: false,
+            server_url: "https://example.com".to_string(),
         }
     }
 }

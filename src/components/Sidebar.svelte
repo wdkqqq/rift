@@ -3,7 +3,6 @@
         activeLibraryView,
         commandPaletteOpen,
         pushRiftHistoryState,
-        settingsPanelOpen,
     } from "../stores/app";
     import { Search, House, ListMusic, Settings } from "lucide-svelte";
 
@@ -20,8 +19,9 @@
         commandPaletteOpen.set(true);
     }
 
-    function openSettingsPanel() {
-        settingsPanelOpen.set(true);
+    function openSettingsView() {
+        pushRiftHistoryState({ riftView: "settings" });
+        activeLibraryView.set("settings");
     }
 
     function openLibraryView() {
@@ -123,8 +123,9 @@
     <div class="flex flex-col w-full px-4 space-y-5 pb-3">
         <div class="group relative self-start">
             <div
-                onclick={openSettingsPanel}
+                onclick={openSettingsView}
                 class="flex items-center p-1 rounded-lg hover:bg-hover active:scale-90 [transition:all_0.2s_ease]"
+                class:bg-hover={$activeLibraryView === "settings"}
             >
                 <div
                     class="w-10 h-10 flex items-center justify-center relative"
@@ -132,7 +133,12 @@
                     <div
                         class="absolute inset-0 rounded-lg bg-transparent scale-125"
                     ></div>
-                    <Settings class="w-5 h-5 text-secondary relative z-10" />
+                    <Settings
+                        class="w-5 h-5 relative z-10 {$activeLibraryView ===
+                        'settings'
+                            ? 'text-white'
+                            : 'text-secondary'}"
+                    />
                 </div>
             </div>
             <span

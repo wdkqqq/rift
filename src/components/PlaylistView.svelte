@@ -8,6 +8,7 @@
         Play,
         UserRound,
     } from "lucide-svelte";
+    import SettingsPanel from "./SettingsPanel.svelte";
     import { onDestroy, onMount, tick } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
     import { readFile } from "@tauri-apps/plugin-fs";
@@ -119,11 +120,11 @@
     let activeAlbumId: string | null = null;
     let isLibraryLoading = false;
 
-    let displayedView: "songs" | "library" | "detail" = "library";
+    let displayedView: "songs" | "library" | "detail" | "settings" = "library";
     let viewStyle =
         "opacity: 1; transform: translateY(0); transition: all 0.3s ease-in-out;";
     let isAnimating = false;
-    let queuedView: "songs" | "library" | "detail" | null = null;
+    let queuedView: "songs" | "library" | "detail" | "settings" | null = null;
     let transitionTimer: ReturnType<typeof setTimeout> | null = null;
     let lastFavoritesRequest = 0;
     let lastAlbumOpenRequestId = 0;
@@ -147,7 +148,8 @@
     };
     let artistRowElement: HTMLDivElement | null = null;
     let contentElement: HTMLDivElement | null = null;
-    let lastActiveLibraryView: "songs" | "library" | "detail" = "songs";
+    let lastActiveLibraryView: "songs" | "library" | "detail" | "settings" =
+        "songs";
     let isSongsView = false;
     let visibleSongsCount = SONGS_PAGE_SIZE;
     let songsLibraryTab: SongsLibraryTab = "playlists";
@@ -279,7 +281,9 @@
         });
     }
 
-    async function animateViewSwitch(nextView: "songs" | "library" | "detail") {
+    async function animateViewSwitch(
+        nextView: "songs" | "library" | "detail" | "settings",
+    ) {
         if (isAnimating) {
             queuedView = nextView;
             return;
@@ -1019,6 +1023,11 @@
             return;
         }
 
+        if (state.riftView === "settings") {
+            activeLibraryView.set("settings");
+            return;
+        }
+
         if (state.riftView === "library-home") {
             activeLibraryView.set("library");
             void animateLibraryModeSwitch("home", null);
@@ -1143,7 +1152,9 @@
     class="flex-1 min-w-0 w-full overflow-auto px-6 py-6"
 >
     <div class="playlist-view-switch" style={viewStyle}>
-        {#if displayedView === "library"}
+        {#if displayedView === "settings"}
+            <SettingsPanel />
+        {:else if displayedView === "library"}
             <div class="w-full space-y-10">
                 <div class="space-y-10" style={libraryContentStyle}>
                     {#if libraryMode === "home"}

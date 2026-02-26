@@ -103,7 +103,9 @@
     <div class="w-full max-w-[760px] space-y-4 pb-8">
         <section>
             <p class="mb-2 text-sm text-secondary">General</p>
-            <div class="border border-border rounded-xl overflow-hidden">
+            <div
+                class="border border-border rounded-xl overflow-hidden bg-[#0d0d0d]"
+            >
                 <div class="setting-item px-4 py-3.5 border-b border-border">
                     <div class="flex items-center justify-between gap-4">
                         <div class="flex-1 mr-4">
@@ -156,7 +158,9 @@
 
         <section>
             <p class="mb-2 text-sm text-secondary">Audio</p>
-            <div class="border border-border rounded-xl overflow-hidden">
+            <div
+                class="border border-border rounded-xl overflow-hidden bg-[#0d0d0d]"
+            >
                 <div class="setting-item px-4 py-3.5 border-b border-border">
                     <div class="flex items-center justify-between gap-4">
                         <div class="flex-1 mr-4">
@@ -234,7 +238,9 @@
 
         <section>
             <p class="mb-2 text-sm text-secondary">Privacy</p>
-            <div class="border border-border rounded-xl overflow-hidden">
+            <div
+                class="border border-border rounded-xl overflow-hidden bg-[#0d0d0d]"
+            >
                 <div class="setting-item px-4 py-3.5">
                     <div class="flex items-center justify-between gap-4">
                         <div class="flex-1 mr-4">
@@ -263,7 +269,9 @@
 
         <section>
             <p class="mb-2 text-sm text-secondary">Network</p>
-            <div class="border border-border rounded-xl overflow-hidden">
+            <div
+                class="border border-border rounded-xl overflow-hidden bg-[#0d0d0d]"
+            >
                 <div class="setting-item px-4 py-3.5 border-b border-border">
                     <div class="flex items-center justify-between gap-4">
                         <div class="flex-1 mr-4">

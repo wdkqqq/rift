@@ -54,6 +54,10 @@
     let sliderValue = $state(0);
     let isAdvancing = false;
     let isSyncing = false;
+    let shuffleMode = $state(false);
+    let shuffleOrder = $state<number[]>([]);
+    let shuffleCursor = $state(-1);
+    let shuffleQueueFingerprint = $state("");
     let repeatMode: "off" | "all" | "one" = $state("off");
     let playlistPopoverOpen = $state(false);
     let playlistSearch = $state("");
@@ -67,6 +71,158 @@
     };
 
     let playlists: Playlist[] = $state([]);
+
+    function trackSignature() {
+        return $playbackQueue.map((track) => track.path).join("|");
+    }
+
+    function normalizeShuffleToken(value: string | null | undefined) {
+        return (value ?? "").trim().toLowerCase();
+    }
+
+    function buildSmartShuffleOrder(startIndex: number) {
+        const queueLength = $playbackQueue.length;
+        if (queueLength === 0) return [];
+
+        const safeStartIndex = Math.min(
+            Math.max(startIndex, 0),
+            queueLength - 1,
+        );
+        const remaining = Array.from(
+            { length: queueLength },
+            (_, index) => index,
+        ).filter((index) => index !== safeStartIndex);
+        const ordered = [safeStartIndex];
+
+        const recentArtists = [
+            normalizeShuffleToken($playbackQueue[safeStartIndex]?.subtitle),
+        ].filter(Boolean);
+        const recentAlbums = [
+            normalizeShuffleToken($playbackQueue[safeStartIndex]?.album),
+        ].filter(Boolean);
+
+        while (remaining.length > 0) {
+            let bestPosition = 0;
+            let bestScore = Number.POSITIVE_INFINITY;
+
+            for (let index = 0; index < remaining.length; index += 1) {
+                const candidateIndex = remaining[index];
+                const candidate = $playbackQueue[candidateIndex];
+                const artist = normalizeShuffleToken(candidate?.subtitle);
+                const album = normalizeShuffleToken(candidate?.album);
+
+                const artistPenalty =
+                    artist && recentArtists.includes(artist) ? 5 : 0;
+                const albumPenalty =
+                    album && recentAlbums.includes(album) ? 2 : 0;
+                const score = artistPenalty + albumPenalty + Math.random();
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestPosition = index;
+                }
+            }
+
+            const [selectedIndex] = remaining.splice(bestPosition, 1);
+            ordered.push(selectedIndex);
+
+            const selectedTrack = $playbackQueue[selectedIndex];
+            const selectedArtist = normalizeShuffleToken(
+                selectedTrack?.subtitle,
+            );
+            const selectedAlbum = normalizeShuffleToken(selectedTrack?.album);
+
+            if (selectedArtist) {
+                recentArtists.unshift(selectedArtist);
+                if (recentArtists.length > 3) {
+                    recentArtists.pop();
+                }
+            }
+            if (selectedAlbum) {
+                recentAlbums.unshift(selectedAlbum);
+                if (recentAlbums.length > 2) {
+                    recentAlbums.pop();
+                }
+            }
+        }
+
+        return ordered;
+    }
+
+    function resetShuffleState() {
+        shuffleOrder = [];
+        shuffleCursor = -1;
+        shuffleQueueFingerprint = trackSignature();
+    }
+
+    function rebuildShuffleFromCurrent() {
+        if ($playbackQueue.length === 0) {
+            resetShuffleState();
+            return;
+        }
+
+        shuffleOrder = buildSmartShuffleOrder($playbackIndex);
+        shuffleCursor = 0;
+        shuffleQueueFingerprint = trackSignature();
+    }
+
+    function syncShuffleCursorWithCurrentTrack() {
+        if (!shuffleMode || $playbackQueue.length === 0) return;
+        if (shuffleOrder.length !== $playbackQueue.length) {
+            rebuildShuffleFromCurrent();
+            return;
+        }
+
+        const currentSignature = trackSignature();
+        if (currentSignature !== shuffleQueueFingerprint) {
+            rebuildShuffleFromCurrent();
+            return;
+        }
+
+        const orderTrackIndex = shuffleOrder[shuffleCursor];
+        if (orderTrackIndex === $playbackIndex) return;
+
+        const existingPosition = shuffleOrder.indexOf($playbackIndex);
+        if (existingPosition >= 0) {
+            shuffleCursor = existingPosition;
+            return;
+        }
+
+        rebuildShuffleFromCurrent();
+    }
+
+    function nextShuffleTrackIndex(cycleIfNeeded: boolean) {
+        if ($playbackQueue.length === 0) return null;
+
+        syncShuffleCursorWithCurrentTrack();
+
+        if (shuffleCursor < shuffleOrder.length - 1) {
+            shuffleCursor += 1;
+            return shuffleOrder[shuffleCursor];
+        }
+
+        if (!cycleIfNeeded || repeatMode !== "all") {
+            return null;
+        }
+
+        rebuildShuffleFromCurrent();
+        if (shuffleOrder.length > 1) {
+            shuffleCursor = 1;
+            return shuffleOrder[shuffleCursor];
+        }
+
+        return shuffleOrder[0] ?? null;
+    }
+
+    function previousShuffleTrackIndex() {
+        if ($playbackQueue.length === 0) return null;
+
+        syncShuffleCursorWithCurrentTrack();
+
+        if (shuffleCursor <= 0) return null;
+        shuffleCursor -= 1;
+        return shuffleOrder[shuffleCursor] ?? null;
+    }
 
     async function loadAndPlay(path: string) {
         try {
@@ -145,6 +301,18 @@
             return;
         }
 
+        if (shuffleMode) {
+            const nextIndex = nextShuffleTrackIndex(true);
+            if (nextIndex !== null) {
+                isAdvancing = true;
+                playbackIndex.set(nextIndex);
+                setTimeout(() => {
+                    isAdvancing = false;
+                }, 100);
+            }
+            return;
+        }
+
         if ($playbackIndex < $playbackQueue.length - 1) {
             isAdvancing = true;
             playbackIndex.set($playbackIndex + 1);
@@ -162,41 +330,18 @@
             }, 100);
             return;
         }
-
-        void playRandomTrack();
     }
 
-    async function playRandomTrack() {
-        try {
-            const randomTrack = await invoke<{
-                title: string;
-                subtitle: string;
-                album: string;
-                duration: string;
-                cover: string;
-                path: string;
-            } | null>("get_random_track");
+    function toggleShuffleMode() {
+        if (!currentTrack || $playbackQueue.length === 0) return;
 
-            if (!randomTrack) {
-                console.warn("No tracks available in library");
-                return;
-            }
-
-            const track = {
-                title: randomTrack.title,
-                subtitle: randomTrack.subtitle,
-                album: randomTrack.album,
-                duration: randomTrack.duration,
-                coverUrl: randomTrack.cover ? randomTrack.cover : null,
-                path: randomTrack.path,
-                source: { kind: "other" } satisfies PlaybackSource,
-            };
-
-            playbackQueue.set([track]);
-            playbackIndex.set(0);
-        } catch (error) {
-            console.error("Failed to get random track:", error);
+        shuffleMode = !shuffleMode;
+        if (shuffleMode) {
+            rebuildShuffleFromCurrent();
+            return;
         }
+
+        resetShuffleState();
     }
 
     async function togglePlayPause() {
@@ -214,6 +359,13 @@
 
     function playPrevious() {
         if ($playbackQueue.length === 0) return;
+        if (shuffleMode) {
+            const previousIndex = previousShuffleTrackIndex();
+            if (previousIndex !== null) {
+                playbackIndex.set(previousIndex);
+            }
+            return;
+        }
         if ($playbackIndex > 0) {
             playbackIndex.set($playbackIndex - 1);
         }
@@ -221,6 +373,13 @@
 
     function playNext() {
         if ($playbackQueue.length === 0) return;
+        if (shuffleMode) {
+            const nextIndex = nextShuffleTrackIndex(false);
+            if (nextIndex !== null) {
+                playbackIndex.set(nextIndex);
+            }
+            return;
+        }
         if ($playbackIndex < $playbackQueue.length - 1) {
             playbackIndex.set($playbackIndex + 1);
         }
@@ -451,6 +610,13 @@
             playlistMemberships = new Set();
         }
     });
+    run(() => {
+        if (!shuffleMode) {
+            shuffleQueueFingerprint = trackSignature();
+            return;
+        }
+        syncShuffleCursorWithCurrentTrack();
+    });
 </script>
 
 <div class="p-3 border-t border-divider">
@@ -587,7 +753,10 @@
         <div class="flex flex-col items-center space-y-2 w-1/3">
             <div class="flex items-center space-x-6">
                 <button
-                    class="text-[#818181] transition-colors hover:text-white [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f]"
+                    class="transition-colors [transition:all_0.2s_ease] disabled:text-[#5f5f5f] disabled:cursor-not-allowed disabled:hover:text-[#5f5f5f] {shuffleMode
+                        ? 'text-white'
+                        : 'text-[#818181] hover:text-white'}"
+                    onclick={toggleShuffleMode}
                     disabled={!currentTrack}
                 >
                     <Shuffle class="h-5 w-5" />

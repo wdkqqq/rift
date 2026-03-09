@@ -226,16 +226,20 @@
                         {#each steps[currentStep].options as option, index}
                             <button
                                 type="button"
-                                class="group active:scale-95 rounded-lg bg-[#111111]/85 px-4 py-3 text-left hover:bg-hover [transition:all_0.2s_ease] {selectedOption ===
+                                class="group rounded-xl border px-4 py-3.5 text-left [transition:all_0.2s_ease] {selectedOption ===
                                 index
-                                    ? 'bg-hover'
-                                    : ''}"
+                                    ? 'border-[#3a3a3a] bg-[#1b1b1b] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+                                    : 'border-border bg-card hover:bg-hover hover:border-[#2f2f2f] active:scale-[0.99]'}"
                                 onclick={() => chooseOption(index)}
                             >
-                                <p class="text-white text-sm md:text-base mb-1">
+                                <p
+                                    class="mb-1 text-white text-[0.95rem] md:text-[1rem] font-medium leading-tight"
+                                >
                                     {option.label}
                                 </p>
-                                <p class="text-secondary text-xs">
+                                <p
+                                    class="text-secondary text-[0.78rem] md:text-[0.81rem] leading-relaxed"
+                                >
                                     {option.hint}
                                 </p>
                             </button>
